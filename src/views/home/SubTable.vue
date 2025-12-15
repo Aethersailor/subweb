@@ -94,7 +94,7 @@
                   <input class="form-control" placeholder="点击获取短链" v-model.trim="result.shortUrl" />
                 </div>
                 <div class="col-12 col-md-2">
-                  <el-button type="primary" :loading="isShortUrlLoading" @click="getShortUrl()" style="width: 100%">短链</el-button>
+                  <el-button type="primary" :loading="isShortUrlLoading" @click="getShortUrl()" style="width: 100%" class="short-url-btn">短链</el-button>
                 </div>
               </div>
             </div>
@@ -348,5 +348,17 @@ export default {
 
 .dark-style .form-control::placeholder {
   color: #5c617a;
+}
+
+/* Fix button text shifting on loading */
+.short-url-btn {
+  position: relative;
+}
+.short-url-btn :deep(.el-icon.is-loading) {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0 !important;
 }
 </style>
