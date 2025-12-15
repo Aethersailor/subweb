@@ -3,6 +3,17 @@ window.config = {
   siteName: 'Subconverter Web',
   // API 地址
   apiUrl: 'http://127.0.0.1:25500',
+  // 后端 API 列表
+  apiBackends: [
+    {
+      name: '本地服务',
+      url: 'http://127.0.0.1:25500',
+    },
+    {
+      name: '官方服务',
+      url: 'https://sub.xeton.dev',
+    },
+  ],
   // 短域名服务地址
   shortUrl: 'https://s.ops.ci',
   // 首页菜单

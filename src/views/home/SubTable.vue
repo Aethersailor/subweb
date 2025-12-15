@@ -21,8 +21,8 @@
                 <div class="col-7 col-md-6">
                   <label class="form-label" for="api">后端服务</label>
                   <select class="form-select" id="api" @change="selectApi">
-                    <option :value="apiUrl">
-                      {{ apiUrl }}
+                    <option v-for="option in backendOptions" :key="option.name" :value="option.url">
+                      {{ option.name }}
                     </option>
                     <option value="manual">自定义后端 API 地址</option>
                   </select>
@@ -147,24 +147,26 @@ export default {
         { value: 'loon', text: 'Loon' },
         { value: 'singbox', text: 'Sing-box' },
       ],
-      apiUrl: window.config.apiUrl,
-      shortUrl: window.config.shortUrl,
-      remoteConfigOptions: window.config.remoteConfigOptions,
-      moreConfig: this.DEFAULT_MORECONFIG,
-      isShowMoreConfig: false,
-      isShowManualApiUrl: false,
-      isShowRemoteConfig: false,
-      result: {
-        subUrl: '',
-        shortUrl: '',
-      },
-      urls: [],
-      api: window.config.apiUrl,
+      backendOptions: [],
+      api: '',
       target: 'clash',
       remoteConfig: '',
     };
   },
+  created() {
+    this.initBackendOptions();
+  },
   methods: {
+    initBackendOptions() {
+      const { apiBackends, apiUrl } = window.config;
+      if (apiBackends && apiBackends.length > 0) {
+        this.backendOptions = apiBackends;
+        this.api = apiBackends[0].url;
+      } else {
+        this.backendOptions = [{ name: apiUrl, url: apiUrl }];
+        this.api = apiUrl;
+      }
+    },
     showMoreConfig() {
       this.isShowMoreConfig = !this.isShowMoreConfig;
     },
