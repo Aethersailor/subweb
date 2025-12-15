@@ -94,7 +94,7 @@
                   <input class="form-control" placeholder="点击获取短链" v-model.trim="result.shortUrl" />
                 </div>
                 <div class="col-12 col-md-2">
-                  <button type="button" class="btn btn-primary" @click="getShortUrl()">短链</button>
+                  <button type="button" class="btn btn-primary" :loading="isShortUrlLoading" @click="getShortUrl()">短链</button>
                 </div>
               </div>
             </div>
@@ -106,7 +106,7 @@
 </template>
 
 <script>
-import { showLoading, hideLoading } from '@/components/loading';
+// import { showLoading, hideLoading } from '@/components/loading';
 import { getSubLink, regexCheck } from './index.js';
 import { request } from '@/network';
 import showNotification from '@/components/notification';
@@ -161,6 +161,7 @@ export default {
       urls: [],
       target: 'clash',
       remoteConfig: window.config.remoteConfigOptions?.[0]?.value || '',
+      isShortUrlLoading: false,
     };
   },
   created() {
@@ -251,9 +252,9 @@ export default {
       if (!this.getConverter()) {
         return;
       }
+      this.isShortUrlLoading = true;
       let data = new FormData();
       data.append('longUrl', btoa(this.result.subUrl));
-      showLoading();
       request({
         method: 'post',
         url: this.shortUrl + '/short',
@@ -267,11 +268,11 @@ export default {
             this.result.shortUrl = res.data.ShortUrl;
             this.toCopy(this.result.shortUrl, '短链接');
           }
-          hideLoading();
+          this.isShortUrlLoading = false;
         })
         .catch(() => {
           this.$showDialog('error', '失败', '短链接生成失败 请检查短链接服务是否可用');
-          hideLoading();
+          this.isShortUrlLoading = false;
         });
     },
   },
