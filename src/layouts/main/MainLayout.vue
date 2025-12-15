@@ -70,6 +70,12 @@ export default {
 };
 </script>
 
+<style>
+:root {
+  color-scheme: light dark;
+}
+</style>
+
 <style scoped>
 @import '@/assets/vendor/css/pages/front-page.css';
 @import '@/assets/vendor/css/pages/front-page-landing.css';
