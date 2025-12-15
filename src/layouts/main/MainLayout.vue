@@ -1,5 +1,11 @@
 <template>
-  <div class="layout-wrapper">
+  <div
+    class="layout-wrapper light-style layout-navbar-fixed layout-wide"
+    dir="ltr"
+    data-theme="theme-default"
+    data-assets-path="assets/"
+    data-template="front-pages"
+  >
     <nav-bar />
     <div class="layout-content">
       <router-view />

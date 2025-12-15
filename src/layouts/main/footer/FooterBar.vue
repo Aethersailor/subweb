@@ -1,5 +1,5 @@
 <template>
-  <footer class="landing-footer bg-body footer-text">
+  <footer class="landing-footer footer-text">
     <div class="footer-bottom py-3">
       <div class="container" style="text-align: center">
         <div class="mb-2 mb-md-0">
