@@ -1,19 +1,13 @@
 <template>
-  <html
-    lang="en"
-    class="light-style layout-navbar-fixed layout-wide"
-    dir="ltr"
-    data-theme="theme-default"
-    data-assets-path="assets/"
-    data-template="front-pages"
-    @wheel="setNavActive"
-  >
-    <body>
-      <nav-bar />
+  <div class="layout-wrapper">
+    <nav-bar />
+    <div class="layout-content">
       <router-view />
+    </div>
+    <div class="layout-footer">
       <footer-bar />
-    </body>
-  </html>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -44,4 +38,21 @@ export default {
 <style scoped>
 @import '@/assets/vendor/css/pages/front-page.css';
 @import '@/assets/vendor/css/pages/front-page-landing.css';
+
+.layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(338.18deg, #fafaff 0%, #ececec 94.44%); /* Apply global background */
+}
+
+.layout-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-footer {
+  margin-top: auto;
+}
 </style>

@@ -27,7 +27,7 @@ export default {
 
 <style scoped>
 .light-style .landing-hero {
-  background: linear-gradient(338.18deg, #fafaff 0%, #ececec 94.44%);
+  /* background: linear-gradient(338.18deg, #fafaff 0%, #ececec 94.44%); */
 }
 .landing-hero .hero-animation-img {
   margin-bottom: -24rem;
