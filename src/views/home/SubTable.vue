@@ -149,6 +149,17 @@ export default {
       ],
       backendOptions: [],
       api: '',
+      shortUrl: window.config.shortUrl,
+      remoteConfigOptions: window.config.remoteConfigOptions,
+      moreConfig: this.DEFAULT_MORECONFIG,
+      isShowMoreConfig: false,
+      isShowManualApiUrl: false,
+      isShowRemoteConfig: false,
+      result: {
+        subUrl: '',
+        shortUrl: '',
+      },
+      urls: [],
       target: 'clash',
       remoteConfig: '',
     };
