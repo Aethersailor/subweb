@@ -1,8 +1,6 @@
 window.config = {
   // 网站标题
   siteName: 'Subconverter Web',
-  // API 地址
-  apiUrl: 'http://127.0.0.1:25500',
   // 后端 API 列表
   apiBackends: [
     {

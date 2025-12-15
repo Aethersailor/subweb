@@ -158,13 +158,10 @@ export default {
   },
   methods: {
     initBackendOptions() {
-      const { apiBackends, apiUrl } = window.config;
+      const { apiBackends } = window.config;
       if (apiBackends && apiBackends.length > 0) {
         this.backendOptions = apiBackends;
         this.api = apiBackends[0].url;
-      } else {
-        this.backendOptions = [{ name: apiUrl, url: apiUrl }];
-        this.api = apiUrl;
       }
     },
     showMoreConfig() {
