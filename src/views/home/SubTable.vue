@@ -317,3 +317,35 @@ export default {
   margin: 1%;
 }
 </style>
+
+<style>
+/* Dark Mode Component Overrides */
+.dark-style .card {
+  background-color: #2f3349;
+  color: #cfd3ec;
+  border: none;
+}
+
+.dark-style .form-label,
+.dark-style .form-check-label {
+  color: #cfd3ec;
+}
+
+.dark-style .form-control,
+.dark-style .form-select {
+  background-color: #25293c;
+  border-color: #434968;
+  color: #cfd3ec;
+}
+
+.dark-style .form-control:focus,
+.dark-style .form-select:focus {
+  background-color: #25293c;
+  border-color: #7367f0;
+  color: #cfd3ec;
+}
+
+.dark-style .form-control::placeholder {
+  color: #5c617a;
+}
+</style>

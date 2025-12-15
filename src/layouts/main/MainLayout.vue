@@ -85,7 +85,7 @@ export default {
 }
 
 .layout-wrapper.dark-style {
-  background-color: #2f3349;
+  background-color: #25293c;
 }
 
 .layout-content {
