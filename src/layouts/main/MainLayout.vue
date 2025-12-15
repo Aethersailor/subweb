@@ -37,6 +37,13 @@ export default {
     },
     updateTheme(e) {
       this.themeClass = e.matches ? 'dark-style' : 'light-style';
+      if (e.matches) {
+        document.body.classList.add('dark-style');
+        document.body.classList.remove('light-style');
+      } else {
+        document.body.classList.add('light-style');
+        document.body.classList.remove('dark-style');
+      }
     },
   },
   mounted() {
@@ -73,6 +80,10 @@ export default {
 <style>
 :root {
   color-scheme: light dark;
+}
+/* Global Dark Mode Overrides for Element Plus */
+body.dark-style .el-loading-mask {
+  background-color: rgba(0, 0, 0, 0.7) !important;
 }
 </style>
 
