@@ -80,7 +80,7 @@ export async function onRequest(context) {
         remoteConfigOptions: remoteConfigOptions,
     };
 
-    const jsContent = `window.config = ${JSON.stringify(config, null, 2)};`;
+    const jsContent = `console.log('✅ Configuration loaded from Cloudflare Function'); window.config = ${JSON.stringify(config, null, 2)};`;
 
     return new Response(jsContent, {
         headers: {
