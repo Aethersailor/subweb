@@ -26,5 +26,8 @@ module.exports = defineConfig({
         resolvers: [ElementPlusResolver()],
       }),
     ],
+    performance: {
+      hints: false,
+    },
   },
 });
