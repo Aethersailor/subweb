@@ -31,7 +31,9 @@
 | 变量名 | 描述 | 示例值 (JSON String) |
 | :--- | :--- | :--- |
 | `API_BACKENDS` | 自定义后端列表 (覆盖 `API_URL`) | `[{"name":"我的服务","url":"https://api.example.com"},{"name":"备用","url":"https://bak.example.com"}]` |
+| `API_BACKENDS` | 自定义后端列表 (覆盖 `API_URL`) | `[{"name":"我的服务","url":"https://api.example.com"},{"name":"备用","url":"https://bak.example.com"}]` |
 | `REMOTE_CONFIG` | 自定义远程配置列表 | `[{"text":"ACL4SSR","value":"https://..."},{"text":"自用","value":"https://..."}]` |
+| `MENU_ITEM` | 自定义顶部菜单 | `[{"title":"TG群","link":"https://t.me/...","target":"_blank"}]` |
 
 配置完成后，请触发一次 **Retry deployment** 以生效。
 
