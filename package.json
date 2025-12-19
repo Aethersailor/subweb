@@ -29,7 +29,7 @@
     "@vue/eslint-config-prettier": "^7.0.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-vue": "^8.0.3",
     "prettier": "^2.4.1",
     "unplugin-auto-import": "^0.16.6",
