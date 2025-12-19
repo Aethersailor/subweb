@@ -10,7 +10,9 @@ updates:
         patterns: ["*"]
   - package-ecosystem: "npm"
     directory: "/"
-    schedule: { interval: "daily", time: "04:05" }
+    schedule:
+      interval: "weekly"
+      time: "04:05" # Keeping the original time, but changing interval to weekly
     open-pull-requests-limit: 10
     labels: ["dependencies", "npm"]
     versioning-strategy: "increase"
