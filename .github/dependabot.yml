@@ -3,32 +3,27 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule: { interval: "daily", time: "04:00" }
-    open-pull-requests-limit: 10
-    labels: ["dependencies", "github-actions"]
+    open-pull-requests-limit: 1
+    rebase-strategy: "auto"
+    labels: ["dependencies","github-actions"]
     groups:
-      actions:
+      all:
         patterns: ["*"]
   - package-ecosystem: "npm"
     directory: "/"
-    schedule:
-      interval: "weekly"
-      time: "04:05" # Keeping the original time, but changing interval to weekly
-    open-pull-requests-limit: 10
-    labels: ["dependencies", "npm"]
-    versioning-strategy: "increase"
+    schedule: { interval: "daily", time: "04:05" }
+    open-pull-requests-limit: 1
+    rebase-strategy: "auto"
+    labels: ["dependencies","npm"]
     groups:
-      js-minor-patch:
-        applies-to: "version-updates"
-        update-types: ["minor", "patch"]
-        patterns: ["*"]
-      js-security:
-        applies-to: "security-updates"
+      all:
         patterns: ["*"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule: { interval: "daily", time: "04:15" }
-    open-pull-requests-limit: 5
-    labels: ["dependencies", "docker"]
+    open-pull-requests-limit: 1
+    rebase-strategy: "auto"
+    labels: ["dependencies","docker"]
     groups:
-      docker-images:
+      all:
         patterns: ["*"]
