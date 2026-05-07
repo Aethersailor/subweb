@@ -1,4 +1,4 @@
-FROM node:25-alpine AS build
+FROM node:26-alpine AS build
 LABEL maintainer="Stille <stille@ioiox.com>"
 
 ENV VERSION 2.0
