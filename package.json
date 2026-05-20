@@ -33,7 +33,7 @@
     "eslint-plugin-vue": "^10.9.1",
     "prettier": "^3.8.3",
     "unplugin-auto-import": "^21.0.0",
-    "unplugin-vue-components": "^32.0.0",
+    "unplugin-vue-components": "^32.1.0",
     "webpack-dev-server": ">=5.2.4"
   }
 }
