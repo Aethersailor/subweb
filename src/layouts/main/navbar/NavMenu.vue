@@ -1,8 +1,15 @@
 <template>
-  <div class="nav-menu" :class="{ open: $store.state.style.main.isCollapsed }">
+  <div
+    id="mobile-navigation"
+    ref="panel"
+    class="nav-menu"
+    :class="{ open }"
+    :aria-hidden="!open && isMobile ? 'true' : null"
+    @keydown.tab="trapFocus"
+  >
     <div class="mobile-menu-head">
       <span>导航</span>
-      <button type="button" aria-label="关闭导航菜单" @click="$store.commit('MAIN_LAYOUT_MENU_EXPAND')">
+      <button ref="closeButton" type="button" aria-label="关闭导航菜单" @click="$emit('close')">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m6 6 12 12M18 6 6 18" />
         </svg>
@@ -10,34 +17,78 @@
     </div>
     <ul>
       <li v-for="item in navBarItem" :key="`${item.title}-${item.link}`">
-        <a :href="item.link" :target="item.target" :rel="item.target === '_blank' ? 'noopener noreferrer' : null">
+        <a
+          :href="item.link"
+          :target="item.target"
+          :rel="item.target === '_blank' ? 'noopener noreferrer' : null"
+          @click="$emit('close')"
+        >
           {{ item.title }}
         </a>
       </li>
     </ul>
   </div>
-  <div
-    v-if="$store.state.style.main.isCollapsed"
+  <button
+    v-if="open"
     class="menu-overlay"
+    type="button"
+    tabindex="-1"
     aria-hidden="true"
-    @click="collapsedMenu"
-  ></div>
+    @click="$emit('close')"
+  ></button>
 </template>
 
 <script>
+import { getRuntimeConfig } from '@/config/runtime.js';
+
 export default {
   name: 'NavMenu',
+  emits: ['close'],
+  props: {
+    open: { type: Boolean, default: false },
+  },
   data() {
     return {
-      navBarItem: [],
+      navBarItem: getRuntimeConfig().menuItem,
+      mediaQuery: null,
+      isMobile: false,
     };
   },
-  created() {
-    this.navBarItem = window.config.menuItem || [];
+  mounted() {
+    this.mediaQuery = window.matchMedia('(max-width: 720px)');
+    this.updateMedia(this.mediaQuery);
+    this.mediaQuery.addEventListener?.('change', this.updateMedia);
+  },
+  beforeUnmount() {
+    this.mediaQuery?.removeEventListener?.('change', this.updateMedia);
   },
   methods: {
-    collapsedMenu() {
-      this.$store.commit('MAIN_LAYOUT_MENU_EXPAND');
+    updateMedia(event) {
+      this.isMobile = event.matches;
+      if (!event.matches && this.open) {
+        this.$emit('close');
+      }
+    },
+    focusClose() {
+      this.$refs.closeButton?.focus();
+    },
+    trapFocus(event) {
+      if (!this.open || !this.isMobile) {
+        return;
+      }
+      const focusable = [...this.$refs.panel.querySelectorAll('button, a[href]')];
+      if (!focusable.length) {
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     },
   },
 };
@@ -84,7 +135,7 @@ export default {
   .nav-menu {
     position: fixed;
     top: 0;
-    right: max(0px, calc(100% - 100vw));
+    right: 0;
     z-index: 120;
     display: none;
     width: min(320px, calc(100vw - 42px));
@@ -158,6 +209,5 @@ export default {
     background: rgba(2, 6, 23, 0.46);
     border: 0;
   }
-
 }
 </style>

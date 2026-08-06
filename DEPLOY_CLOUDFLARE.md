@@ -30,11 +30,11 @@
 
 在 **Build settings** 中填写：
 
-| 配置项 | 值 |
-| :--- | :--- |
-| **Framework preset** | `Vue.js` |
-| **Build command** | `npm run build` |
-| **Build output directory** | `dist` |
+| 配置项                     | 值              |
+| :------------------------- | :-------------- |
+| **Framework preset**       | `Vue.js`        |
+| **Build command**          | `npm run build` |
+| **Build output directory** | `dist`          |
 
 ### 4. 部署
 
@@ -63,8 +63,8 @@
 
 Cloudflare 会自动创建一条 CNAME 记录：
 
-| 类型 | 名称 | 内容 |
-| :--- | :--- | :--- |
+| 类型  | 名称  | 内容                     |
+| :---- | :---- | :----------------------- |
 | CNAME | `sub` | `your-project.pages.dev` |
 
 > 💡 **提示**：如果域名不在 Cloudflare 管理，你需要手动在域名服务商处添加上述 CNAME 记录，然后回到 Pages 验证。
@@ -81,29 +81,29 @@ Cloudflare 会自动为自定义域名签发免费的 SSL 证书，无需额外�
 
 ### 基础配置
 
-| 变量名 | 描述 | 默认值 |
-| :--- | :--- | :--- |
-| `SITE_NAME` | 网站标题 | `Subconverter Web` |
-| `API_URL` | 后端 API 地址 | `http://127.0.0.1:25500` |
-| `SHORT_URL` | 短链接服务地址 | `https://s.asailor.org` |
-| `ENABLE_SHORT_URL` | 是否启用短链接功能 | `true` |
+| 变量名             | 描述               | 默认值                  |
+| :----------------- | :----------------- | :---------------------- |
+| `SITE_NAME`        | 网站标题           | `Subconverter Web`      |
+| `API_URL`          | 后端 API 地址      | `https://sub.xeton.dev` |
+| `SHORT_URL`        | 短链接服务地址     | 空                      |
+| `ENABLE_SHORT_URL` | 是否启用短链接功能 | `false`                 |
 
 ### 进阶配置（JSON 格式）
 
 如需配置多个后端或自定义远程配置列表，可使用 **JSON 格式**字符串：
 
-| 变量名 | 描述 | 示例值 |
-| :--- | :--- | :--- |
-| `API_BACKENDS` | 自定义后端列表（覆盖 `API_URL`） | 见下方示例 |
-| `REMOTE_CONFIG` | 自定义远程配置列表 | 见下方示例 |
-| `MENU_ITEM` | 自定义顶部菜单 | 见下方示例 |
+| 变量名          | 描述                             | 示例值     |
+| :-------------- | :------------------------------- | :--------- |
+| `API_BACKENDS`  | 自定义后端列表（覆盖 `API_URL`） | 见下方示例 |
+| `REMOTE_CONFIG` | 自定义远程配置列表               | 见下方示例 |
+| `MENU_ITEM`     | 自定义顶部菜单                   | 见下方示例 |
 
 #### 示例：`API_BACKENDS`
 
 ```json
 [
-  {"name": "主后端", "url": "https://api.example.com"},
-  {"name": "备用后端", "url": "https://bak.example.com"}
+  { "name": "主后端", "url": "https://api.example.com" },
+  { "name": "备用后端", "url": "https://bak.example.com" }
 ]
 ```
 
@@ -111,8 +111,8 @@ Cloudflare 会自动为自定义域名签发免费的 SSL 证书，无需额外�
 
 ```json
 [
-  {"text": "ACL4SSR 默认规则", "value": "https://raw.githubusercontent.com/..."},
-  {"text": "自用规则", "value": "https://your-config-url.com/config.ini"}
+  { "text": "ACL4SSR 默认规则", "value": "https://raw.githubusercontent.com/..." },
+  { "text": "自用规则", "value": "https://your-config-url.com/config.ini" }
 ]
 ```
 
@@ -120,12 +120,14 @@ Cloudflare 会自动为自定义域名签发免费的 SSL 证书，无需额外�
 
 ```json
 [
-  {"title": "Telegram 群组", "link": "https://t.me/your_group", "target": "_blank"},
-  {"title": "GitHub", "link": "https://github.com/Aethersailor", "target": "_blank"}
+  { "title": "Telegram 群组", "link": "https://t.me/your_group", "target": "_blank" },
+  { "title": "GitHub", "link": "https://github.com/Aethersailor", "target": "_blank" }
 ]
 ```
 
 > ⚠️ **注意**：修改环境变量后，需要点击 **Retry deployment** 触发重新部署才能生效。
+
+> 🔐 **隐私说明**：转换时，用户输入的订阅或节点会发送到所选后端。短链接功能还会把完整转换链接发送到 `SHORT_URL`；其中可能包含订阅凭据，因此默认关闭，前端启用后也会要求用户再次确认。
 
 ---
 
@@ -138,7 +140,8 @@ Cloudflare 会自动为自定义域名签发免费的 SSL 证书，无需额外�
 1. 浏览器请求 `/conf/config.js`
 2. Pages Function 拦截该请求
 3. 读取环境变量，动态生成配置代码
-4. 返回定制化的 JavaScript 配置
+4. 校验后端、远程配置与菜单 URL，过滤危险协议
+5. 以 `Cache-Control: no-store` 返回定制化 JavaScript 配置
 
 这使得无需修改代码即可实现配置自定义。
 

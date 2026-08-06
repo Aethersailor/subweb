@@ -1,93 +1,50 @@
-export async function onRequest(context) {
-    const { env } = context;
+import { DEFAULT_RUNTIME_CONFIG, normalizeRuntimeConfig } from '../../shared/runtime-config.js';
 
-    // 1. Base Configuration
-    const siteName = env.SITE_NAME || 'Subconverter Web';
-    const shortUrl = env.SHORT_URL || 'https://s.ops.ci';
-    const apiUrl = env.API_URL || 'http://127.0.0.1:25500';
-    // 解析 ENABLE_SHORT_URL，默认为 true，仅当显式设置为 'false' 时关闭
-    const enableShortUrl = (env.ENABLE_SHORT_URL || 'true').toLowerCase() !== 'false';
-
-    // 2. Advanced: API Backends
-    // Priority: env.API_BACKENDS (JSON) > env.API_URL (Single Override) > Default List
-    let apiBackends = [
-        {
-            name: '本地服务',
-            url: apiUrl,
-        },
-        {
-            name: '官方服务',
-            url: 'https://sub.xeton.dev',
-        },
-    ];
-
-    if (env.API_BACKENDS) {
-        try {
-            apiBackends = JSON.parse(env.API_BACKENDS);
-        } catch (e) {
-            console.error('Failed to parse API_BACKENDS', e);
-        }
+function parseJsonArray(value, fallback, variableName) {
+  if (!value) {
+    return fallback;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+      throw new TypeError('value must be an array');
     }
+    return parsed;
+  } catch (error) {
+    console.error(`${variableName} is invalid: ${error.message}`);
+    return fallback;
+  }
+}
 
-    // 3. Advanced: Remote Config
-    // Priority: env.REMOTE_CONFIG (JSON) > Default List
-    let remoteConfigOptions = [
-        {
-            value: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini',
-            text: 'ACL4SSR Online',
-        },
-        {
-            value: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini',
-            text: 'ACL4SSR Online Full',
-        },
-    ];
+function readBoolean(value, fallback = false) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  return value.trim().toLowerCase() === 'true';
+}
 
-    if (env.REMOTE_CONFIG) {
-        try {
-            remoteConfigOptions = JSON.parse(env.REMOTE_CONFIG);
-        } catch (e) {
-            console.error('Failed to parse REMOTE_CONFIG', e);
-        }
-    }
+export async function onRequest({ env }) {
+  const defaultBackends = env.API_URL ? [{ name: '自定义后端', url: env.API_URL }] : DEFAULT_RUNTIME_CONFIG.apiBackends;
 
-    // 4. Advanced: Menu Items
-    // Priority: env.MENU_ITEM (JSON) > Default List
-    let menuItem = [
-        {
-            title: '首页',
-            link: '/',
-            target: '',
-        },
-        {
-            title: 'GitHub',
-            link: 'https://github.com/Aethersailor/subweb',
-            target: '_blank',
-        },
-    ];
+  const rawConfig = {
+    siteName: env.SITE_NAME || DEFAULT_RUNTIME_CONFIG.siteName,
+    apiBackends: parseJsonArray(env.API_BACKENDS, defaultBackends, 'API_BACKENDS'),
+    enableShortUrl: readBoolean(env.ENABLE_SHORT_URL, false),
+    shortUrl: env.SHORT_URL || '',
+    menuItem: parseJsonArray(env.MENU_ITEM, DEFAULT_RUNTIME_CONFIG.menuItem, 'MENU_ITEM'),
+    remoteConfigOptions: parseJsonArray(env.REMOTE_CONFIG, DEFAULT_RUNTIME_CONFIG.remoteConfigOptions, 'REMOTE_CONFIG'),
+  };
 
-    if (env.MENU_ITEM) {
-        try {
-            menuItem = JSON.parse(env.MENU_ITEM);
-        } catch (e) {
-            console.error('Failed to parse MENU_ITEM', e);
-        }
-    }
+  const { config, issues } = normalizeRuntimeConfig(rawConfig);
+  if (issues.length) {
+    console.warn(`Runtime configuration was normalized: ${issues.join('; ')}`);
+  }
 
-    // 5. Construct Final Config Object
-    const config = {
-        siteName: siteName,
-        apiBackends: apiBackends,
-        enableShortUrl: enableShortUrl,
-        shortUrl: shortUrl,
-        menuItem: menuItem,
-        remoteConfigOptions: remoteConfigOptions,
-    };
-
-    const jsContent = `console.log('✅ Configuration loaded from Cloudflare Function'); window.config = ${JSON.stringify(config, null, 2)};`;
-
-    return new Response(jsContent, {
-        headers: {
-            'content-type': 'application/javascript;charset=UTF-8',
-        },
-    });
+  return new Response(`window.config = ${JSON.stringify(config)};`, {
+    headers: {
+      'content-type': 'application/javascript; charset=UTF-8',
+      'cache-control': 'no-store, max-age=0',
+      'x-content-type-options': 'nosniff',
+    },
+  });
 }

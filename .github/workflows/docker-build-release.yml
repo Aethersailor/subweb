@@ -1,15 +1,20 @@
-name: "Quick Build and Release"
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-release-main
+  cancel-in-progress: false
 
 jobs:
   build:
+    name: publish-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,21 +23,74 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Login Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/subweb
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+          labels: |
+            org.opencontainers.image.title=SubWeb
+            org.opencontainers.image.description=Privacy-conscious Subconverter web frontend
+
+      - name: Build and push multi-platform image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
-          # Only build for x86 (amd64) for maximum speed as requested
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
-          # Hardcoded 'subweb' repo name and 'latest' tag as requested
-          tags: ${{ secrets.DOCKER_USERNAME }}/subweb:latest
-          # Enable GitHub Actions caching to speed up subsequent builds
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            APP_REVISION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Verify published platforms
+        env:
+          IMAGE: ${{ secrets.DOCKER_USERNAME }}/subweb
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          docker buildx imagetools inspect "$IMAGE@$DIGEST" --raw > manifest.json
+          jq -e '
+            [.manifests[]
+              | select(.platform.os == "linux")
+              | select(.platform.architecture == "amd64" or .platform.architecture == "arm64")
+              | .platform.architecture]
+            | unique
+            | sort == ["amd64", "arm64"]
+          ' manifest.json
+
+      - name: Smoke-test the published image
+        env:
+          IMAGE: ${{ secrets.DOCKER_USERNAME }}/subweb
+          DIGEST: ${{ steps.build.outputs.digest }}
+          EXPECTED_REVISION: ${{ github.sha }}
+        run: |
+          docker run --detach --name subweb-smoke --publish 18080:80 "$IMAGE@$DIGEST"
+          trap 'docker rm --force subweb-smoke >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error http://127.0.0.1:18080/ >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 20 ]; then
+              docker logs subweb-smoke
+              exit 1
+            fi
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:18080/version.json |
+            jq -e --arg expected "$EXPECTED_REVISION" '.revision == $expected'
+          curl --fail --silent --show-error http://127.0.0.1:18080/conf/config.js |
+            grep --fixed-strings 'enableShortUrl: false'
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/ |
+            grep --ignore-case --fixed-strings 'x-content-type-options: nosniff'

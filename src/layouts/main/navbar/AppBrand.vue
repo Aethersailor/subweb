@@ -3,22 +3,18 @@
     <router-link to="/" class="brand-link" aria-label="返回首页">
       <picture class="brand-mark" aria-hidden="true">
         <source media="(prefers-color-scheme: dark)" :srcset="`${baseUrl}subconverter-extended-dark.svg`" />
-        <img
-          :src="`${baseUrl}subconverter-extended-light.svg`"
-          alt=""
-          width="43"
-          height="43"
-          decoding="async"
-        />
+        <img :src="`${baseUrl}subconverter-extended-light.svg`" alt="" width="43" height="43" decoding="async" />
       </picture>
       <span class="brand-text">{{ siteName }}</span>
     </router-link>
     <button
       class="menu-toggle"
+      ref="menuToggle"
       type="button"
-      :aria-expanded="$store.state.style.main.isCollapsed"
+      :aria-expanded="menuOpen"
+      aria-controls="mobile-navigation"
       aria-label="打开导航菜单"
-      @click="$store.commit('MAIN_LAYOUT_MENU_EXPAND')"
+      @click="$emit('toggle-menu')"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 7h16M4 12h16M4 17h16" />
@@ -28,8 +24,14 @@
 </template>
 
 <script>
+import { getRuntimeConfig } from '@/config/runtime.js';
+
 export default {
   name: 'AppBrand',
+  emits: ['toggle-menu'],
+  props: {
+    menuOpen: { type: Boolean, default: false },
+  },
   data() {
     return {
       baseUrl: import.meta.env.BASE_URL,
@@ -37,7 +39,12 @@ export default {
     };
   },
   created() {
-    this.siteName = window.config.siteName;
+    this.siteName = getRuntimeConfig().siteName;
+  },
+  methods: {
+    focusToggle() {
+      this.$refs.menuToggle?.focus();
+    },
   },
 };
 </script>

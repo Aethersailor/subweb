@@ -1,8 +1,8 @@
 <template>
-  <header class="site-header" :class="navStyles">
+  <header class="site-header" :class="{ 'navbar-active': active }">
     <div class="topbar">
-      <AppBrand />
-      <NavMenu />
+      <AppBrand ref="brand" :menu-open="menuOpen" @toggle-menu="setMenuOpen(!menuOpen)" />
+      <NavMenu ref="menu" :open="menuOpen" @close="setMenuOpen(false)" />
     </div>
   </header>
 </template>
@@ -10,16 +10,44 @@
 <script>
 import AppBrand from './AppBrand.vue';
 import NavMenu from './NavMenu.vue';
+
 export default {
   name: 'NavBar',
-  components: {
-    AppBrand,
-    NavMenu,
+  components: { AppBrand, NavMenu },
+  props: {
+    active: { type: Boolean, default: false },
   },
-  computed: {
-    navStyles() {
-      // 首页滚动 nav 透明度样式
-      return [...this.$store.state.style.main.navStyles].join(' ');
+  data() {
+    return { menuOpen: false };
+  },
+  mounted() {
+    document.addEventListener('keydown', this.onKeydown);
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this.onKeydown);
+    this.unlockBodyScroll();
+  },
+  methods: {
+    onKeydown(event) {
+      if (event.key === 'Escape' && this.menuOpen) {
+        this.setMenuOpen(false);
+      }
+    },
+    setMenuOpen(open) {
+      if (this.menuOpen === open) {
+        return;
+      }
+      this.menuOpen = open;
+      if (open) {
+        document.body.classList.add('menu-open');
+        this.$nextTick(() => this.$refs.menu?.focusClose());
+      } else {
+        this.unlockBodyScroll();
+        this.$nextTick(() => this.$refs.brand?.focusToggle());
+      }
+    },
+    unlockBodyScroll() {
+      document.body.classList.remove('menu-open');
     },
   },
 };

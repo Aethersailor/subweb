@@ -1,32 +1,52 @@
-name: Dependabot Auto-Merge
+name: Dependabot Safe Auto-Merge
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_run:
+    workflows: [Quality]
+    types: [completed]
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
 jobs:
   auto-merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.pull_requests[0] != null
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
     steps:
-      - name: Dependabot metadata
+      - name: Read Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@v3
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-url: ${{ github.event.workflow_run.pull_requests[0].html_url }}
 
-      - name: Enable auto-merge for Dependabot PRs
-        run: gh pr merge --auto --squash "$PR_URL"
+      - name: Approve safe patch update
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          steps.metadata.outputs.maintainer-changes == 'false'
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Approve PR
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.workflow_run.pull_requests[0].html_url }}
         run: gh pr review --approve "$PR_URL"
+
+      - name: Merge safe patch update
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          steps.metadata.outputs.maintainer-changes == 'false'
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.workflow_run.pull_requests[0].html_url }}
+        run: gh pr merge --squash "$PR_URL"
+
+      - name: Trigger image publication after bot merge
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          steps.metadata.outputs.maintainer-changes == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run docker-build-release.yml --ref main

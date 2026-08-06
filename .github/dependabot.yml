@@ -1,32 +1,32 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule: { interval: "daily", time: "04:00" }
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule: { interval: 'daily', time: '04:00' }
     open-pull-requests-limit: 1
-    rebase-strategy: "auto"
-    labels: ["dependencies","github-actions"]
+    rebase-strategy: 'auto'
+    labels: ['dependencies', 'github-actions']
     groups:
       all:
-        patterns: ["*"]
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule: { interval: "daily", time: "04:05" }
+        patterns: ['*']
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule: { interval: 'daily', time: '04:05' }
     open-pull-requests-limit: 1
-    rebase-strategy: "auto"
-    labels: ["dependencies","npm"]
+    rebase-strategy: 'auto'
+    labels: ['dependencies', 'npm']
     ignore:
-      - dependency-name: "eslint"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
     groups:
       all:
-        patterns: ["*"]
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule: { interval: "daily", time: "04:15" }
+        patterns: ['*']
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule: { interval: 'daily', time: '04:15' }
     open-pull-requests-limit: 1
-    rebase-strategy: "auto"
-    labels: ["dependencies","docker"]
+    rebase-strategy: 'auto'
+    labels: ['dependencies', 'docker']
     groups:
       all:
-        patterns: ["*"]
+        patterns: ['*']

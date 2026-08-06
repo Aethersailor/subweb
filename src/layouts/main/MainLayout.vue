@@ -1,6 +1,6 @@
 <template>
   <div class="app-shell" :class="themeClass" dir="ltr">
-    <nav-bar />
+    <nav-bar :active="navActive" />
     <main class="layout-content">
       <router-view />
     </main>
@@ -21,12 +21,13 @@ export default {
     return {
       themeClass: 'light-style',
       mediaQuery: null,
+      navActive: false,
     };
   },
   methods: {
     setNavActive() {
       const scrollY = window.scrollY || window.pageYOffset;
-      this.$store.commit('MAIN_LAYOUT_NAV_ACTIVE', scrollY > 0);
+      this.navActive = scrollY > 0;
     },
     updateTheme(e) {
       this.themeClass = e.matches ? 'dark-style' : 'light-style';
@@ -61,12 +62,6 @@ export default {
   },
 };
 </script>
-
-<style>
-body.dark-style .el-loading-mask {
-  background-color: rgba(0, 0, 0, 0.7) !important;
-}
-</style>
 
 <style scoped>
 .app-shell {

@@ -1,5 +1,5 @@
 <template>
-  <form class="converter-form" @submit.prevent="getSubUrl">
+  <form class="converter-form" novalidate @submit.prevent="getSubUrl">
     <div class="section-heading">
       <div>
         <span class="section-kicker">Subscription converter</span>
@@ -8,11 +8,17 @@
       <span class="section-badge">{{ targetLabel }}</span>
     </div>
 
+    <div v-if="formMessage.text" class="form-message" :class="`is-${formMessage.type}`" role="alert">
+      {{ formMessage.text }}
+    </div>
+
     <div class="field field-wide">
       <label for="subscription-urls">订阅链接或节点</label>
       <textarea
         id="subscription-urls"
+        ref="urlsInput"
         v-model.trim="urls"
+        :aria-invalid="formMessage.field === 'urls'"
         :placeholder="placeholder"
         rows="4"
         spellcheck="false"
@@ -35,7 +41,7 @@
       <div class="field">
         <label for="api">后端服务</label>
         <div class="select-wrap">
-          <select id="api" @change="selectApi">
+          <select id="api" v-model="backendSelection" @change="selectApi">
             <option v-for="option in backendOptions" :key="`${option.name}-${option.url}`" :value="option.url">
               {{ option.name }}
             </option>
@@ -43,13 +49,7 @@
           </select>
         </div>
       </div>
-      <div
-        v-if="backendProbe.state !== 'idle'"
-        class="backend-status"
-        :class="`is-${backendProbe.state}`"
-        role="status"
-        aria-live="polite"
-      >
+      <div v-if="api" class="backend-status" :class="`is-${backendProbe.state}`" role="status" aria-live="polite">
         <span class="backend-status-dot" aria-hidden="true"></span>
         <span>{{ backendProbeText }}</span>
       </div>
@@ -57,14 +57,24 @@
 
     <div v-if="isShowManualApiUrl" class="field field-wide reveal-block">
       <label for="manual-api">自定义后端 API</label>
-      <input id="manual-api" v-model.trim="api" type="url" placeholder="https://sub.example.com" />
+      <input
+        id="manual-api"
+        ref="apiInput"
+        v-model.trim="api"
+        type="url"
+        inputmode="url"
+        :aria-invalid="formMessage.field === 'api'"
+        placeholder="https://sub.example.com"
+        @blur="probeBackend(api)"
+      />
+      <span class="field-hint">点击页面其他位置时会检测后端；转换数据会发送到该地址。</span>
     </div>
 
     <div class="remote-row">
       <div class="field">
         <label for="remote">远程配置</label>
         <div class="select-wrap">
-          <select id="remote" @change="selectRemoteConfig">
+          <select id="remote" v-model="remoteSelection" @change="selectRemoteConfig">
             <option v-for="option in remoteConfigOptions" :key="`${option.text}-${option.value}`" :value="option.value">
               {{ option.text }}
             </option>
@@ -82,20 +92,34 @@
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4" />
         </svg>
-        {{ isShowMoreConfig ? '收起参数' : '可选参数' }}
+        {{ isShowMoreConfig ? '收起参数' : '可选参数'
+        }}<span v-if="activeOptionCount">（{{ activeOptionCount }}）</span>
       </button>
     </div>
 
     <div v-if="isShowRemoteConfig" class="field field-wide reveal-block">
       <label for="manual-remote">自定义远程配置</label>
-      <input id="manual-remote" v-model.trim="remoteConfig" type="url" placeholder="https://example.com/config.ini" />
+      <input
+        id="manual-remote"
+        ref="remoteInput"
+        v-model.trim="remoteConfig"
+        type="url"
+        inputmode="url"
+        :aria-invalid="formMessage.field === 'remote'"
+        placeholder="https://example.com/config.ini"
+      />
     </div>
 
     <section v-if="isShowMoreConfig" class="options-panel reveal-block" aria-label="可选参数">
       <div class="options-section">
         <div class="options-heading">
           <h3>文本参数</h3>
-          <span>留空即使用后端默认值</span>
+          <div class="options-heading-actions">
+            <span>留空即使用后端默认值；收起后仍会生效</span>
+            <button v-if="activeOptionCount" type="button" class="text-button" @click="resetMoreConfig">
+              清空参数
+            </button>
+          </div>
         </div>
         <div class="options-inputs">
           <div class="field">
@@ -201,7 +225,7 @@
     <div class="result-group">
       <div class="result-copy">
         <label for="result-url">转换结果</label>
-        <input id="result-url" v-model.trim="result.subUrl" placeholder="点击转换后自动生成并复制" />
+        <input id="result-url" v-model.trim="result.subUrl" readonly placeholder="点击转换后自动生成并复制" />
       </div>
       <button class="primary-button" type="submit">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -214,12 +238,23 @@
     <div v-if="isShortUrlEnabled" class="result-group short-result">
       <div class="result-copy">
         <label for="short-url">短链接</label>
-        <input id="short-url" v-model.trim="result.shortUrl" placeholder="生成便于分享的短链接" />
+        <input id="short-url" v-model.trim="result.shortUrl" readonly placeholder="生成便于分享的短链接" />
+        <label class="privacy-consent">
+          <input v-model="shortUrlConsent" type="checkbox" />
+          <span>我了解：完整转换链接（可能含订阅凭据）将发送至 {{ shortUrlHost }}；Base64 不是加密。</span>
+        </label>
       </div>
-      <button class="secondary-button short-url-btn" type="button" :disabled="isShortUrlLoading" @click="getShortUrl">
+      <button
+        class="secondary-button short-url-btn"
+        type="button"
+        :disabled="isShortUrlLoading || !shortUrlConsent"
+        @click="getShortUrl"
+      >
         <span v-if="isShortUrlLoading" class="spinner" aria-hidden="true"></span>
         <svg v-else viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" />
+          <path
+            d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"
+          />
         </svg>
         {{ isShortUrlLoading ? '生成中' : '生成短链' }}
       </button>
@@ -228,9 +263,15 @@
 </template>
 
 <script>
-import { getSubLink, regexCheck } from './index.js';
-import { request } from '@/network';
+import {
+  countActiveOptions,
+  getSubLink,
+  normalizeApiBaseUrl,
+  normalizeRemoteConfigUrl,
+  toStandardBase64,
+} from './index.js';
 import showNotification from '@/components/notification';
+import { getRuntimeConfig } from '@/config/runtime.js';
 
 export default {
   name: 'SubTable',
@@ -296,6 +337,7 @@ export default {
     };
   },
   data() {
+    const runtimeConfig = getRuntimeConfig();
     return {
       placeholder: 'https://example.com/subscription\nvmess://...\nss://...',
       targetOptions: [
@@ -315,10 +357,13 @@ export default {
         { value: 'loon', text: 'Loon' },
         { value: 'singbox', text: 'Sing-box' },
       ],
+      runtimeConfig,
       backendOptions: [],
+      backendSelection: 'manual',
       api: '',
-      shortUrl: window.config.shortUrl,
-      remoteConfigOptions: window.config.remoteConfigOptions || [],
+      shortUrl: runtimeConfig.shortUrl,
+      remoteConfigOptions: runtimeConfig.remoteConfigOptions,
+      remoteSelection: runtimeConfig.remoteConfigOptions[0]?.value || '',
       moreConfig: { ...this.DEFAULT_MORECONFIG },
       isShowMoreConfig: false,
       isShowManualApiUrl: false,
@@ -329,8 +374,14 @@ export default {
       },
       urls: '',
       target: 'clash',
-      remoteConfig: window.config.remoteConfigOptions?.[0]?.value || '',
+      remoteConfig: runtimeConfig.remoteConfigOptions[0]?.value || '',
       isShortUrlLoading: false,
+      shortUrlConsent: false,
+      formMessage: {
+        type: 'error',
+        text: '',
+        field: '',
+      },
       backendProbe: {
         state: 'idle',
         version: '',
@@ -341,7 +392,17 @@ export default {
   },
   computed: {
     isShortUrlEnabled() {
-      return window.config.enableShortUrl !== false;
+      return this.runtimeConfig.enableShortUrl;
+    },
+    activeOptionCount() {
+      return countActiveOptions(this.moreConfig);
+    },
+    shortUrlHost() {
+      try {
+        return new URL(this.shortUrl).host;
+      } catch {
+        return '配置的短链接服务';
+      }
     },
     targetLabel() {
       return this.targetOptions.find((option) => option.value === this.target)?.text || this.target;
@@ -353,7 +414,10 @@ export default {
       if (this.backendProbe.state === 'online') {
         return `在线 · ${this.backendProbe.version}`;
       }
-      return '离线或无法访问';
+      if (this.backendProbe.state === 'unreachable') {
+        return '浏览器无法确认可用性（可能是离线、超时或 CORS 限制）';
+      }
+      return '尚未检测后端';
     },
   },
   created() {
@@ -376,14 +440,20 @@ export default {
   },
   methods: {
     initBackendOptions() {
-      const { apiBackends } = window.config;
-      if (apiBackends && apiBackends.length > 0) {
-        this.backendOptions = apiBackends;
-        this.api = apiBackends[0].url;
+      this.backendOptions = this.runtimeConfig.apiBackends;
+      if (this.backendOptions.length > 0) {
+        this.backendSelection = this.backendOptions[0].url;
+        this.api = this.backendSelection;
+      } else {
+        this.backendSelection = 'manual';
+        this.isShowManualApiUrl = true;
       }
     },
     showMoreConfig() {
       this.isShowMoreConfig = !this.isShowMoreConfig;
+    },
+    resetMoreConfig() {
+      this.moreConfig = { ...this.DEFAULT_MORECONFIG };
     },
     isEmojiDetailDisabled(key) {
       return (key === 'add_emoji' || key === 'remove_emoji') && this.moreConfig.emoji !== '';
@@ -404,7 +474,13 @@ export default {
     },
     async probeBackend(api) {
       this.cancelBackendProbe();
-      const normalizedApi = api.replace(/\/+$/, '');
+      let normalizedApi;
+      try {
+        normalizedApi = normalizeApiBaseUrl(api);
+      } catch {
+        this.resetBackendProbe();
+        return;
+      }
       const requestId = this.backendProbeRequestId + 1;
       const controller = new AbortController();
       this.backendProbeRequestId = requestId;
@@ -423,7 +499,7 @@ export default {
           throw new Error(`Backend returned HTTP ${response.status}`);
         }
 
-        const body = (await response.text()).trim();
+        const body = (await response.text()).trim().replace(/\s+/g, ' ').slice(0, 120);
         if (!body) {
           throw new Error('Backend returned an empty version response');
         }
@@ -439,7 +515,7 @@ export default {
           return;
         }
         this.backendProbe = {
-          state: 'offline',
+          state: 'unreachable',
           version: '',
         };
       } finally {
@@ -471,7 +547,7 @@ export default {
     },
     async toCopy(url, title) {
       if (!url) {
-        this.$showDialog('warning', '注意', '复制失败，内容为空');
+        this.setFormMessage('复制失败，内容为空');
         return;
       }
 
@@ -482,8 +558,7 @@ export default {
           const copyInput = document.createElement('textarea');
           copyInput.value = url;
           copyInput.setAttribute('readonly', '');
-          copyInput.style.position = 'fixed';
-          copyInput.style.opacity = '0';
+          copyInput.className = 'clipboard-helper';
           document.body.appendChild(copyInput);
           copyInput.select();
           const copied = document.execCommand('copy');
@@ -494,33 +569,53 @@ export default {
         }
         showNotification(`${title}复制成功`, '成功');
       } catch {
-        this.$showDialog('warning', '注意', '复制失败，请手动复制生成的链接');
+        this.setFormMessage('复制失败，请手动复制生成的链接');
       }
     },
+    setFormMessage(text, field = '', type = 'error') {
+      this.formMessage = { text, field, type };
+      if (field) {
+        this.$nextTick(() => this.$refs[`${field}Input`]?.focus());
+      }
+    },
+    clearFormMessage() {
+      this.formMessage = { text: '', field: '', type: 'error' };
+    },
     getConverter() {
-      if (this.urls === '') {
-        this.$showDialog('warning', '注意', '请输入订阅链接或节点');
+      this.clearFormMessage();
+      this.result = { subUrl: '', shortUrl: '' };
+      if (!this.urls.trim()) {
+        this.setFormMessage('请输入订阅链接或节点。', 'urls');
         return false;
       }
-      if (!regexCheck(this.api)) {
-        this.$showDialog('warning', '注意', '请输入自定义后端 API 地址，或选择默认后端服务。');
+      try {
+        this.api = normalizeApiBaseUrl(this.api);
+      } catch (error) {
+        this.setFormMessage(error.message, 'api');
         return false;
       }
-      if (this.remoteConfig === '' && this.isShowRemoteConfig) {
-        this.$showDialog('warning', '注意', '请输入远程配置地址，或选择默认配置。');
+      if (!this.remoteConfig && this.isShowRemoteConfig) {
+        this.setFormMessage('请输入远程配置地址，或选择“不使用远程配置”。', 'remote');
         return false;
       }
-      if (this.api.endsWith('/')) {
-        this.api = this.api.slice(0, -1);
+      try {
+        this.remoteConfig = normalizeRemoteConfigUrl(this.remoteConfig);
+      } catch (error) {
+        this.setFormMessage(error.message, 'remote');
+        return false;
       }
-      this.result.subUrl = getSubLink(
-        this.urls,
-        this.api,
-        this.target,
-        this.remoteConfig,
-        this.isShowMoreConfig,
-        this.moreConfig
-      );
+      try {
+        this.result.subUrl = getSubLink({
+          urls: this.urls,
+          api: this.api,
+          target: this.target,
+          remoteConfig: this.remoteConfig,
+          moreConfig: this.moreConfig,
+        });
+      } catch (error) {
+        this.setFormMessage(error.message, 'urls');
+        return false;
+      }
       return true;
     },
     getSubUrl() {
@@ -528,32 +623,41 @@ export default {
         this.toCopy(this.result.subUrl, '订阅链接');
       }
     },
-    getShortUrl() {
+    async getShortUrl() {
+      if (!this.shortUrlConsent) {
+        this.setFormMessage('请先确认短链接隐私提示。');
+        return;
+      }
       if (!this.getConverter()) {
         return;
       }
       this.isShortUrlLoading = true;
       const data = new FormData();
-      data.append('longUrl', btoa(this.result.subUrl));
-      request({
-        method: 'post',
-        url: `${this.shortUrl}/short`,
-        data,
-      })
-        .then((res) => {
-          if (res.data.Code === 1 && res.data.ShortUrl !== '') {
-            this.result.shortUrl = res.data.ShortUrl;
-            this.toCopy(this.result.shortUrl, '短链接');
-          } else {
-            this.$showDialog('error', '失败', '短链接服务未返回有效链接');
-          }
-        })
-        .catch(() => {
-          this.$showDialog('error', '失败', '短链接生成失败，请检查短链接服务是否可用');
-        })
-        .finally(() => {
-          this.isShortUrlLoading = false;
+      data.append('longUrl', toStandardBase64(this.result.subUrl));
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(`${this.shortUrl}/short`, {
+          method: 'POST',
+          body: data,
+          signal: controller.signal,
         });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        if (payload.Code !== 1 || typeof payload.ShortUrl !== 'string' || !payload.ShortUrl) {
+          throw new Error('短链接服务未返回有效链接');
+        }
+        this.result.shortUrl = normalizeRemoteConfigUrl(payload.ShortUrl);
+        await this.toCopy(this.result.shortUrl, '短链接');
+      } catch (error) {
+        const reason = error.name === 'AbortError' ? '请求超时' : error.message;
+        this.setFormMessage(`短链接生成失败：${reason}`);
+      } finally {
+        window.clearTimeout(timeoutId);
+        this.isShortUrlLoading = false;
+      }
     },
   },
 };
@@ -635,6 +739,23 @@ export default {
   line-height: 1.45;
 }
 
+.form-message {
+  padding: 12px 14px;
+  color: var(--danger);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: 14px;
+}
+
+.form-message.is-success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
 .backend-status {
   display: inline-flex;
   width: fit-content;
@@ -674,8 +795,8 @@ export default {
   color: var(--success);
 }
 
-.backend-status.is-offline {
-  color: var(--danger);
+.backend-status.is-unreachable {
+  color: var(--warning);
 }
 
 input,
@@ -849,6 +970,23 @@ select {
   text-align: right;
 }
 
+.options-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.text-button {
+  padding: 3px 0;
+  color: var(--accent-blue);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
 .advanced-inputs {
   display: grid;
   gap: 14px;
@@ -938,6 +1076,27 @@ select {
   border-top: 1px solid var(--inner-border);
 }
 
+.privacy-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.privacy-consent input {
+  width: 17px;
+  min-width: 17px;
+  height: 17px;
+  min-height: 17px;
+  margin: 1px 0 0;
+  padding: 0;
+  accent-color: var(--accent-blue);
+}
+
 .short-url-btn:disabled {
   cursor: progress;
   opacity: 0.72;
@@ -1009,6 +1168,11 @@ select {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .options-heading-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .options-heading span {

@@ -1,12 +1,13 @@
 <template>
   <section class="home-page">
     <div class="hero">
-      <div class="status-pill">
-        <span class="status-dot"></span>
-        SubConverter-Extended compatible
-      </div>
+      <div class="status-pill">SubConverter-compatible frontend</div>
       <h1>Subconverter <span>订阅转换</span></h1>
       <p>将订阅或节点转换为 Clash、Surge、Quantumult X、V2Ray 等常用客户端格式。</p>
+    </div>
+    <div v-if="configIssues.length" class="config-warning" role="alert">
+      <strong>配置提示</strong>
+      <span>{{ configIssues.join('；') }}</span>
     </div>
     <div class="converter-panel glass-panel">
       <SubTable />
@@ -16,10 +17,14 @@
 
 <script>
 import SubTable from './SubTable.vue';
+import { getRuntimeConfigIssues } from '@/config/runtime.js';
 export default {
   name: 'SubconverterView',
   components: {
     SubTable,
+  },
+  data() {
+    return { configIssues: getRuntimeConfigIssues() };
   },
 };
 </script>
@@ -53,14 +58,6 @@ export default {
   border-radius: 999px;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--success);
-  border-radius: 50%;
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 14%, transparent);
-}
-
 .hero h1 {
   margin: 0;
   color: var(--text-primary);
@@ -88,6 +85,21 @@ export default {
 .converter-panel {
   padding: 32px;
   animation: panel-enter 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.config-warning {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 18px;
+  padding: 13px 16px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--warning) 11%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 36%, transparent);
+  border-radius: 16px;
+}
+
+.config-warning strong {
+  color: var(--warning);
 }
 
 @keyframes panel-enter {

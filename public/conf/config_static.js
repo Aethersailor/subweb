@@ -1,35 +1,21 @@
 window.config = {
-  // 网站标题
   siteName: 'Subconverter Web',
-  // 后端 API 列表
   apiBackends: [
     {
-      name: '本地服务',
-      url: 'http://127.0.0.1:25500',
-    },
-    {
-      name: '官方服务',
+      name: '官方公共服务（订阅内容会发送至此）',
       url: 'https://sub.xeton.dev',
     },
   ],
-  // 是否启用短链接功能 (true: 启用, false: 关闭)
-  enableShortUrl: true,
-  // 短域名服务地址
-  shortUrl: 'https://s.ops.ci',
-  // 首页菜单
+  enableShortUrl: false,
+  shortUrl: '',
   menuItem: [
-    {
-      title: '首页',
-      link: '/',
-      target: '',
-    },
+    { title: '首页', link: '/', target: '' },
     {
       title: 'GitHub',
       link: 'https://github.com/Aethersailor/subweb',
       target: '_blank',
     },
   ],
-  // 远程配置地址,可以自行按照格式添加。
   remoteConfigOptions: [
     {
       value: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini',

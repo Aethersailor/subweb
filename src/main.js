@@ -1,68 +1,75 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
-import store from './store';
-import DialogView from '@/components/dialog/DialogView.vue';
-import { showDialog, closeDialog } from 'components/dialog';
-import * as ElementPlusIconsVue from '@element-plus/icons-vue';
+import { setRuntimeConfig } from './config/runtime.js';
 
 const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 document.body.classList.add(prefersDarkScheme ? 'dark-style' : 'light-style');
 
 function runtimeConfigUrl(path) {
-    return `${import.meta.env.BASE_URL}${path}`;
+  return `${import.meta.env.BASE_URL}${path}`;
 }
 
 function loadRuntimeConfigScript(src) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = () => {
-            script.remove();
-            reject(new Error(`Failed to load ${src}`));
-        };
-        document.head.appendChild(script);
-    });
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      window.clearTimeout(timeoutId);
+      script.remove();
+      callback(value);
+    };
+    const timeoutId = window.setTimeout(() => {
+      finish(reject, new Error(`加载 ${src} 超时`));
+    }, 5000);
+    script.onload = () => {
+      finish(resolve);
+    };
+    script.onerror = () => {
+      finish(reject, new Error(`无法加载 ${src}`));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 async function loadRuntimeConfig() {
-    if (window.config) {
-        return;
-    }
+  if (window.config) {
+    return { rawConfig: window.config, loadError: '' };
+  }
 
-    const sources = [runtimeConfigUrl('conf/config.js?v=cf_v1'), runtimeConfigUrl('conf/config_static.js')];
-    let lastError;
-
-    for (const source of sources) {
-        try {
-            await loadRuntimeConfigScript(source);
-            if (window.config) {
-                return;
-            }
-        } catch (error) {
-            lastError = error;
-        }
+  const sources = [runtimeConfigUrl('conf/config.js?v=cf_v2'), runtimeConfigUrl('conf/config_static.js')];
+  const errors = [];
+  for (const source of sources) {
+    try {
+      await loadRuntimeConfigScript(source);
+      if (window.config) {
+        return { rawConfig: window.config, loadError: '' };
+      }
+      errors.push(`${source} 未设置 window.config`);
+    } catch (error) {
+      errors.push(error.message);
     }
+  }
 
-    if (lastError) {
-        console.warn(lastError.message);
-    }
+  console.warn(errors.join('; '));
+  return {
+    rawConfig: undefined,
+    loadError: '运行时配置加载失败，已进入安全手动模式；请手动填写后端 API。',
+  };
 }
 
-await loadRuntimeConfig();
-document.title = `${window.config.siteName || 'Subconverter Web'} - 在线订阅转换`;
-
-const app = createApp(App);
-
-// Register all icons
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-    app.component(key, component);
+const { rawConfig, loadError } = await loadRuntimeConfig();
+const runtimeState = setRuntimeConfig(rawConfig, { safeFallback: !rawConfig });
+if (loadError) {
+  runtimeState.issues.splice(0, runtimeState.issues.length, loadError);
 }
 
-app.component('DialogView', DialogView);
-app.use(router).use(store);
+document.title = `${runtimeState.config.siteName} - 在线订阅转换`;
+document.documentElement.lang = 'zh-CN';
 
-app.config.globalProperties.$showDialog = showDialog;
-app.config.globalProperties.$closeDialog = closeDialog;
-app.mount('#app');
+createApp(App).use(router).mount('#app');

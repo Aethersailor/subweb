@@ -1,14 +1,29 @@
 <template>
   <footer class="site-footer">
-    <span>Subconverter Web</span>
+    <span>{{ siteName }}</span>
     <span class="footer-dot" aria-hidden="true"></span>
     <a href="https://github.com/Aethersailor/subweb" target="_blank" rel="noopener noreferrer">Aethersailor/subweb</a>
+    <template v-if="shortRevision !== 'local'">
+      <span class="footer-dot" aria-hidden="true"></span>
+      <a v-if="revisionUrl" :href="revisionUrl" target="_blank" rel="noopener noreferrer">版本 {{ shortRevision }}</a>
+      <span v-else>版本 {{ shortRevision }}</span>
+    </template>
   </footer>
 </template>
 
 <script>
+import { getRuntimeConfig } from '@/config/runtime.js';
+
 export default {
   name: 'FooterBar',
+  data() {
+    const revision = import.meta.env.APP_REVISION || 'local';
+    return {
+      siteName: getRuntimeConfig().siteName,
+      shortRevision: revision === 'local' ? revision : revision.slice(0, 8),
+      revisionUrl: /^[0-9a-f]{40}$/i.test(revision) ? `https://github.com/Aethersailor/subweb/commit/${revision}` : '',
+    };
+  },
 };
 </script>
 

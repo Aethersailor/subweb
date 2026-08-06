@@ -1,17 +1,17 @@
 <template>
-  <div id="app">
-    <router-view />
-    <dialog-view v-if="$store.state.app.dialog.active"></dialog-view>
-  </div>
+  <router-view />
+  <ToastHost />
 </template>
 
 <script>
+import ToastHost from '@/components/notification/ToastHost.vue';
+
 export default {
-  name: 'app',
+  name: 'App',
+  components: { ToastHost },
 };
 </script>
 
 <style>
 @import '@/assets/theme.css';
-@import 'element-plus/theme-chalk/index.css';
 </style>

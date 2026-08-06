@@ -93,7 +93,6 @@ body {
   background: var(--bg-gradient);
   background-attachment: fixed;
   font-family:
-    'Outfit',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -103,6 +102,19 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body.menu-open {
+  overflow: hidden;
+}
+
+.clipboard-helper {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 body::before,
@@ -116,8 +128,7 @@ body::after {
 
 body::before {
   background-image:
-    linear-gradient(var(--bg-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    linear-gradient(var(--bg-grid) 1px, transparent 1px), linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
   background-size: 36px 36px;
   opacity: 0.58;
   mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
