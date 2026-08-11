@@ -10,7 +10,7 @@ RUN npm ci
 COPY . .
 RUN npm run check
 
-FROM nginx:1.31.1-alpine
+FROM nginx:1.31.3-alpine
 LABEL org.opencontainers.image.source="https://github.com/Aethersailor/subweb"
 
 COPY --from=build /app/dist /usr/share/nginx/html
