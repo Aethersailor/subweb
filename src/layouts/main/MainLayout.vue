@@ -1,6 +1,6 @@
 <template>
   <div class="app-shell" :class="themeClass" dir="ltr">
-    <nav-bar :active="navActive" />
+    <nav-bar />
     <main class="layout-content">
       <router-view />
     </main>
@@ -21,14 +21,9 @@ export default {
     return {
       themeClass: 'light-style',
       mediaQuery: null,
-      navActive: false,
     };
   },
   methods: {
-    setNavActive() {
-      const scrollY = window.scrollY || window.pageYOffset;
-      this.navActive = scrollY > 0;
-    },
     updateTheme(e) {
       this.themeClass = e.matches ? 'dark-style' : 'light-style';
       if (e.matches) {
@@ -41,7 +36,6 @@ export default {
     },
   },
   mounted() {
-    window.addEventListener('scroll', this.setNavActive);
     this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     this.updateTheme(this.mediaQuery);
 
@@ -52,8 +46,6 @@ export default {
     }
   },
   beforeUnmount() {
-    window.removeEventListener('scroll', this.setNavActive);
-
     if (this.mediaQuery?.removeEventListener) {
       this.mediaQuery.removeEventListener('change', this.updateTheme);
     } else {

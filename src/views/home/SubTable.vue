@@ -239,17 +239,8 @@
       <div class="result-copy">
         <label for="short-url">短链接</label>
         <input id="short-url" v-model.trim="result.shortUrl" readonly placeholder="生成便于分享的短链接" />
-        <label class="privacy-consent">
-          <input v-model="shortUrlConsent" type="checkbox" />
-          <span>我了解：完整转换链接（可能含订阅凭据）将发送至 {{ shortUrlHost }}；Base64 不是加密。</span>
-        </label>
       </div>
-      <button
-        class="secondary-button short-url-btn"
-        type="button"
-        :disabled="isShortUrlLoading || !shortUrlConsent"
-        @click="getShortUrl"
-      >
+      <button class="secondary-button short-url-btn" type="button" :disabled="isShortUrlLoading" @click="getShortUrl">
         <span v-if="isShortUrlLoading" class="spinner" aria-hidden="true"></span>
         <svg v-else viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -376,7 +367,6 @@ export default {
       target: 'clash',
       remoteConfig: runtimeConfig.remoteConfigOptions[0]?.value || '',
       isShortUrlLoading: false,
-      shortUrlConsent: false,
       formMessage: {
         type: 'error',
         text: '',
@@ -396,13 +386,6 @@ export default {
     },
     activeOptionCount() {
       return countActiveOptions(this.moreConfig);
-    },
-    shortUrlHost() {
-      try {
-        return new URL(this.shortUrl).host;
-      } catch {
-        return '配置的短链接服务';
-      }
     },
     targetLabel() {
       return this.targetOptions.find((option) => option.value === this.target)?.text || this.target;
@@ -624,10 +607,6 @@ export default {
       }
     },
     async getShortUrl() {
-      if (!this.shortUrlConsent) {
-        this.setFormMessage('请先确认短链接隐私提示。');
-        return;
-      }
       if (!this.getConverter()) {
         return;
       }
@@ -1074,27 +1053,6 @@ select {
 .short-result {
   padding-top: 17px;
   border-top: 1px solid var(--inner-border);
-}
-
-.privacy-consent {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  color: var(--text-muted);
-  font-size: 0.76rem;
-  font-weight: 500;
-  line-height: 1.45;
-  cursor: pointer;
-}
-
-.privacy-consent input {
-  width: 17px;
-  min-width: 17px;
-  height: 17px;
-  min-height: 17px;
-  margin: 1px 0 0;
-  padding: 0;
-  accent-color: var(--accent-blue);
 }
 
 .short-url-btn:disabled {
