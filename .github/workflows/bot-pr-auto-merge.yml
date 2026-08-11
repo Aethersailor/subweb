@@ -1,0 +1,57 @@
+name: Bot PR Auto-Merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: bot-pr-auto-merge-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  enable-current-pr:
+    name: enable-current-pr
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.pull_request.user.login == 'dependabot[bot]' ||
+       github.event.pull_request.user.login == 'github-advanced-security[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable squash auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --squash
+
+  reconcile-open-prs:
+    name: reconcile-open-prs
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable squash auto-merge for every eligible bot PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          gh api --paginate "repos/$GH_REPO/pulls?state=open&base=$DEFAULT_BRANCH&per_page=100" \
+            --jq '.[]
+              | select(.draft == false)
+              | select(.head.repo.full_name == env.GH_REPO)
+              | select(.user.login == "dependabot[bot]" or .user.login == "github-advanced-security[bot]")
+              | .number' |
+          while read -r pr_number; do
+            gh pr merge "$pr_number" --repo "$GH_REPO" --auto --squash
+          done

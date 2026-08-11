@@ -15,9 +15,6 @@ updates:
     open-pull-requests-limit: 1
     rebase-strategy: 'auto'
     labels: ['dependencies', 'npm']
-    ignore:
-      - dependency-name: 'eslint'
-        update-types: ['version-update:semver-major']
     groups:
       all:
         patterns: ['*']
