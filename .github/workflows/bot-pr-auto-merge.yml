@@ -2,12 +2,13 @@ name: Bot PR Auto-Merge
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, closed]
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -20,6 +21,7 @@ jobs:
     name: enable-current-pr
     if: >-
       github.event_name == 'pull_request_target' &&
+      github.event.action != 'closed' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.base.ref == github.event.repository.default_branch &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -33,6 +35,27 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --squash
+
+  dispatch-after-merge:
+    name: dispatch-after-merge
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.pull_request.user.login == 'dependabot[bot]' ||
+       github.event.pull_request.user.login == 'github-advanced-security[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch main CI and release workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          gh workflow run ci.yml --repo "$GH_REPO" --ref "$DEFAULT_BRANCH"
+          gh workflow run docker-build-release.yml --repo "$GH_REPO" --ref "$DEFAULT_BRANCH"
 
   reconcile-open-prs:
     name: reconcile-open-prs
