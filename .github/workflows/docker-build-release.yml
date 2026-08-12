@@ -3,13 +3,15 @@ name: Build and Release
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
-  group: docker-release-main
+  group: docker-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -23,20 +25,37 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Prepare image names
+        id: images
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          echo "dockerhub=${DOCKERHUB_USERNAME,,}/subweb" >> "$GITHUB_OUTPUT"
+          echo "ghcr=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
       - name: Generate image metadata
         id: metadata
         uses: docker/metadata-action@v6
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/subweb
+          images: |
+            ${{ steps.images.outputs.dockerhub }}
+            ${{ steps.images.outputs.ghcr }}
           tags: |
-            type=raw,value=latest
-            type=sha,format=long
+            type=raw,value=latest,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch }}
+            type=ref,event=tag,enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
           labels: |
             org.opencontainers.image.title=SubWeb
             org.opencontainers.image.description=Privacy-conscious Subconverter web frontend
@@ -57,40 +76,87 @@ jobs:
 
       - name: Verify published platforms
         env:
-          IMAGE: ${{ secrets.DOCKER_USERNAME }}/subweb
+          DOCKERHUB_IMAGE: ${{ steps.images.outputs.dockerhub }}
+          GHCR_IMAGE: ${{ steps.images.outputs.ghcr }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          docker buildx imagetools inspect "$IMAGE@$DIGEST" --raw > manifest.json
-          jq -e '
-            [.manifests[]
-              | select(.platform.os == "linux")
-              | select(.platform.architecture == "amd64" or .platform.architecture == "arm64")
-              | .platform.architecture]
-            | unique
-            | sort == ["amd64", "arm64"]
-          ' manifest.json
+          for image in "$DOCKERHUB_IMAGE" "$GHCR_IMAGE"; do
+            docker buildx imagetools inspect "$image@$DIGEST" --raw > manifest.json
+            jq -e '
+              [.manifests[]
+                | select(.platform.os == "linux")
+                | select(.platform.architecture == "amd64" or .platform.architecture == "arm64")
+                | .platform.architecture]
+              | unique
+              | sort == ["amd64", "arm64"]
+            ' manifest.json
+          done
 
-      - name: Smoke-test the published image
+      - name: Smoke-test the published images
         env:
-          IMAGE: ${{ secrets.DOCKER_USERNAME }}/subweb
+          DOCKERHUB_IMAGE: ${{ steps.images.outputs.dockerhub }}
+          GHCR_IMAGE: ${{ steps.images.outputs.ghcr }}
           DIGEST: ${{ steps.build.outputs.digest }}
           EXPECTED_REVISION: ${{ github.sha }}
         run: |
-          docker run --detach --name subweb-smoke --publish 18080:80 "$IMAGE@$DIGEST"
           trap 'docker rm --force subweb-smoke >/dev/null 2>&1 || true' EXIT
-          for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error http://127.0.0.1:18080/ >/dev/null; then
-              break
-            fi
-            if [ "$attempt" -eq 20 ]; then
-              docker logs subweb-smoke
-              exit 1
-            fi
-            sleep 1
+          for image in "$DOCKERHUB_IMAGE" "$GHCR_IMAGE"; do
+            docker run --detach --name subweb-smoke --publish 18080:80 "$image@$DIGEST"
+            for attempt in $(seq 1 20); do
+              if curl --fail --silent --show-error http://127.0.0.1:18080/ >/dev/null; then
+                break
+              fi
+              if [ "$attempt" -eq 20 ]; then
+                docker logs subweb-smoke
+                exit 1
+              fi
+              sleep 1
+            done
+            curl --fail --silent --show-error http://127.0.0.1:18080/version.json |
+              jq -e --arg expected "$EXPECTED_REVISION" '.revision == $expected'
+            curl --fail --silent --show-error http://127.0.0.1:18080/conf/config.js |
+              grep --fixed-strings 'enableShortUrl: false'
+            curl --fail --silent --show-error --head http://127.0.0.1:18080/ |
+              grep --ignore-case --fixed-strings 'x-content-type-options: nosniff'
+            docker rm --force subweb-smoke
           done
-          curl --fail --silent --show-error http://127.0.0.1:18080/version.json |
-            jq -e --arg expected "$EXPECTED_REVISION" '.revision == $expected'
-          curl --fail --silent --show-error http://127.0.0.1:18080/conf/config.js |
-            grep --fixed-strings 'enableShortUrl: false'
-          curl --fail --silent --show-error --head http://127.0.0.1:18080/ |
-            grep --ignore-case --fixed-strings 'x-content-type-options: nosniff'
+
+      - name: Remove legacy Docker Hub SHA tags
+        if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          namespace="${DOCKERHUB_USERNAME,,}"
+          access_token="$({
+            jq -n \
+              --arg identifier "$DOCKERHUB_USERNAME" \
+              --arg secret "$DOCKERHUB_PASSWORD" \
+              '{identifier: $identifier, secret: $secret}' |
+              curl --fail-with-body --silent --show-error \
+                --retry 3 --retry-all-errors \
+                --header 'Content-Type: application/json' \
+                --data-binary @- \
+                https://hub.docker.com/v2/auth/token
+          } | jq -er '.access_token')"
+
+          next="https://hub.docker.com/v2/namespaces/$namespace/repositories/subweb/tags?page_size=100"
+          : > legacy-tags.txt
+          while [ -n "$next" ]; do
+            response="$(curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors \
+              --header "Authorization: Bearer $access_token" \
+              "$next")"
+            jq -r '.results[].name | select(startswith("sha-"))' <<< "$response" >> legacy-tags.txt
+            next="$(jq -r '.next // empty' <<< "$response")"
+          done
+
+          sort --unique --output legacy-tags.txt legacy-tags.txt
+          while read -r tag; do
+            [ -n "$tag" ] || continue
+            curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors \
+              --request DELETE \
+              --header "Authorization: Bearer $access_token" \
+              "https://hub.docker.com/v2/namespaces/$namespace/repositories/subweb/tags/$tag"
+          done < legacy-tags.txt

@@ -99,6 +99,8 @@ docker run -d --name subweb --restart always \
 
 镜像同时发布 `linux/amd64` 与 `linux/arm64`。镜像只负责提供静态前端，不会在运行服务器上编译；构建由 GitHub Actions 完成。
 
+镜像同步发布到 Docker Hub（`aethersailor/subweb:latest`）和 GitHub Container Registry（`ghcr.io/aethersailor/subweb:latest`），可任选其一使用。正式版本发布后，也可将 `latest` 替换为对应的 `v*` 版本标签。
+
 > 💡 **推荐**：使用 Nginx 反向代理并配置 HTTPS
 
 ---
