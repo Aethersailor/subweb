@@ -13,8 +13,8 @@
     "check": "npm run format:check && npm run lint && npm test && npm run build"
   },
   "dependencies": {
-    "vue": "^3.5.38",
-    "vue-router": "^5.1.0"
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
