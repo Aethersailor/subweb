@@ -7,3 +7,9 @@
 
 /version.json
   Cache-Control: no-store, max-age=0
+
+/conf/config_static.js
+  Cache-Control: no-store, max-age=0
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

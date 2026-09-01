@@ -23,7 +23,19 @@ function readBoolean(value, fallback = false) {
   return value.trim().toLowerCase() === 'true';
 }
 
-export async function onRequest({ env }) {
+export async function onRequest({ request, env }) {
+  const method = request?.method || 'GET';
+  if (method !== 'GET' && method !== 'HEAD') {
+    return new Response('Method Not Allowed\n', {
+      status: 405,
+      headers: {
+        allow: 'GET, HEAD',
+        'content-type': 'text/plain; charset=UTF-8',
+        'cache-control': 'no-store, max-age=0',
+        'x-content-type-options': 'nosniff',
+      },
+    });
+  }
   const defaultBackends = env.API_URL ? [{ name: '自定义后端', url: env.API_URL }] : DEFAULT_RUNTIME_CONFIG.apiBackends;
 
   const rawConfig = {
@@ -35,12 +47,12 @@ export async function onRequest({ env }) {
     remoteConfigOptions: parseJsonArray(env.REMOTE_CONFIG, DEFAULT_RUNTIME_CONFIG.remoteConfigOptions, 'REMOTE_CONFIG'),
   };
 
-  const { config, issues } = normalizeRuntimeConfig(rawConfig);
+  const { config, issues } = normalizeRuntimeConfig(rawConfig, { requireSecureBackends: true });
   if (issues.length) {
     console.warn(`Runtime configuration was normalized: ${issues.join('; ')}`);
   }
 
-  return new Response(`window.config = ${JSON.stringify(config)};`, {
+  return new Response(method === 'HEAD' ? null : `window.config = ${JSON.stringify(config)};`, {
     headers: {
       'content-type': 'application/javascript; charset=UTF-8',
       'cache-control': 'no-store, max-age=0',

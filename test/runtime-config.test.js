@@ -43,3 +43,20 @@ test('短链接只有在显式开启且地址有效时才启用', () => {
   assert.equal(config.enableShortUrl, true);
   assert.equal(config.shortUrl, 'https://short.example.com');
 });
+
+test('后端类型保持向后兼容并规范化无效值', () => {
+  const { config, issues } = normalizeRuntimeConfig({
+    ...DEFAULT_RUNTIME_CONFIG,
+    apiBackends: [
+      { name: 'SCE', url: 'https://sce.example.com', type: 'sce' },
+      { name: '旧配置', url: 'https://legacy.example.com' },
+      { name: '错误类型', url: 'https://unknown.example.com', type: 'extended' },
+    ],
+  });
+  assert.deepEqual(config.apiBackends, [
+    { name: 'SCE', url: 'https://sce.example.com', type: 'sce' },
+    { name: '旧配置', url: 'https://legacy.example.com', type: 'auto' },
+    { name: '错误类型', url: 'https://unknown.example.com', type: 'auto' },
+  ]);
+  assert.ok(issues.some((issue) => issue.includes('type 无效')));
+});

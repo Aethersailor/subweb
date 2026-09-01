@@ -9,8 +9,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test",
+    "pages:check": "npx --yes wrangler@4.127.1 pages functions build functions --outdir dist/functions-test --project-directory . --build-output-directory dist",
     "format:check": "prettier --check . --ignore-path .gitignore",
-    "check": "npm run format:check && npm run lint && npm test && npm run build"
+    "check": "npm run format:check && npm run lint && npm test && npm run build && npm run pages:check"
   },
   "dependencies": {
     "vue": "^3.5.42",

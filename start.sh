@@ -69,7 +69,7 @@ if [ -n "${API_URL:-}${SHORT_URL:-}${SITE_NAME:-}${ENABLE_SHORT_URL:-}" ]; then
   {
     printf 'window.config = {\n'
     printf '  siteName: "%s",\n' "$site_json"
-    printf '  apiBackends: [{ name: "自定义后端", url: "%s" }],\n' "$api_json"
+    printf '  apiBackends: [{ name: "自定义后端", url: "%s", type: "auto" }],\n' "$api_json"
     printf '  enableShortUrl: %s,\n' "$enable_short_url"
     printf '  shortUrl: "%s",\n' "$short_json"
     printf '  menuItem: [\n'

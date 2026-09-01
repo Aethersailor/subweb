@@ -31,8 +31,40 @@ test('Pages Function 校验 JSON 环境变量并过滤不安全值', async () =>
     },
   });
   const config = parseConfigScript(await response.text());
-  assert.deepEqual(config.apiBackends, [{ name: '正常', url: 'https://api.example.com/base' }]);
+  assert.deepEqual(config.apiBackends, [{ name: '正常', url: 'https://api.example.com/base', type: 'auto' }]);
   assert.deepEqual(config.menuItem, []);
   assert.equal(config.enableShortUrl, true);
   assert.equal(config.shortUrl, 'https://short.example.com');
+});
+
+test('Pages Function 保留后端类型、拒绝不安全后端并限制请求方法', async () => {
+  const response = await onRequest({
+    request: new Request('https://sub.example.com/conf/config.js'),
+    env: {
+      API_BACKENDS: JSON.stringify([
+        { name: 'SCE', url: 'https://api.example.com', type: 'sce' },
+        { name: '传统', url: 'https://legacy.example.com', type: 'legacy' },
+        { name: '不安全', url: 'http://plain.example.com', type: 'sce' },
+      ]),
+    },
+  });
+  const config = parseConfigScript(await response.text());
+  assert.deepEqual(config.apiBackends, [
+    { name: 'SCE', url: 'https://api.example.com', type: 'sce' },
+    { name: '传统', url: 'https://legacy.example.com', type: 'legacy' },
+  ]);
+
+  const head = await onRequest({
+    request: new Request('https://sub.example.com/conf/config.js', { method: 'HEAD' }),
+    env: {},
+  });
+  assert.equal(await head.text(), '');
+  assert.equal(head.headers.get('cache-control'), 'no-store, max-age=0');
+
+  const rejected = await onRequest({
+    request: new Request('https://sub.example.com/conf/config.js', { method: 'POST' }),
+    env: {},
+  });
+  assert.equal(rejected.status, 405);
+  assert.equal(rejected.headers.get('allow'), 'GET, HEAD');
 });

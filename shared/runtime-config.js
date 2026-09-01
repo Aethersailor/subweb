@@ -2,6 +2,7 @@ const DEFAULT_API_BACKENDS = [
   {
     name: '官方公共服务（订阅内容会发送至此）',
     url: 'https://sub.xeton.dev',
+    type: 'auto',
   },
 ];
 
@@ -34,14 +35,19 @@ export const DEFAULT_RUNTIME_CONFIG = Object.freeze({
   remoteConfigOptions: DEFAULT_REMOTE_CONFIG_OPTIONS,
 });
 
-function normalizeHttpUrl(value, { allowPath = true } = {}) {
+function normalizeHttpUrl(value, { allowPath = true, requireHttps = false } = {}) {
   if (typeof value !== 'string' || !value.trim()) {
     return '';
   }
 
   try {
     const url = new URL(value.trim());
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      (requireHttps && url.protocol !== 'https:') ||
+      url.username ||
+      url.password
+    ) {
       return '';
     }
     if (!allowPath && (url.search || url.hash)) {
@@ -64,18 +70,22 @@ function normalizeMenuLink(value) {
   return normalizeHttpUrl(link);
 }
 
-function normalizeApiBackends(value, issues) {
+function normalizeApiBackends(value, issues, { requireHttps = false } = {}) {
   if (!Array.isArray(value)) {
     issues.push('apiBackends 不是数组，已使用默认后端');
     value = DEFAULT_API_BACKENDS;
   }
 
   const normalized = value.flatMap((item) => {
-    const url = normalizeHttpUrl(item?.url, { allowPath: false });
+    const url = normalizeHttpUrl(item?.url, { allowPath: false, requireHttps });
     if (!url) {
       return [];
     }
-    return [{ name: String(item?.name || new URL(url).host).trim(), url: url.replace(/\/+$/, '') }];
+    const type = ['auto', 'sce', 'legacy'].includes(item?.type) ? item.type : 'auto';
+    if (item?.type !== undefined && item.type !== type) {
+      issues.push(`后端 ${String(item?.name || new URL(url).host)} 的 type 无效，已使用 auto`);
+    }
+    return [{ name: String(item?.name || new URL(url).host).trim(), url: url.replace(/\/+$/, ''), type }];
   });
 
   if (normalized.length !== value.length) {
@@ -123,7 +133,7 @@ function normalizeMenuItems(value, issues) {
   return normalized;
 }
 
-export function normalizeRuntimeConfig(rawConfig, { safeFallback = false } = {}) {
+export function normalizeRuntimeConfig(rawConfig, { safeFallback = false, requireSecureBackends = false } = {}) {
   const issues = [];
   const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
   if (raw !== rawConfig) {
@@ -134,7 +144,10 @@ export function normalizeRuntimeConfig(rawConfig, { safeFallback = false } = {})
     ? { ...DEFAULT_RUNTIME_CONFIG, apiBackends: [], remoteConfigOptions: [] }
     : DEFAULT_RUNTIME_CONFIG;
   const source = { ...defaults, ...raw };
-  const shortUrl = normalizeHttpUrl(source.shortUrl, { allowPath: false }).replace(/\/+$/, '');
+  const shortUrl = normalizeHttpUrl(source.shortUrl, {
+    allowPath: false,
+    requireHttps: requireSecureBackends,
+  }).replace(/\/+$/, '');
   const enableShortUrl = source.enableShortUrl === true && Boolean(shortUrl);
 
   if (source.enableShortUrl === true && !shortUrl) {
@@ -147,7 +160,7 @@ export function normalizeRuntimeConfig(rawConfig, { safeFallback = false } = {})
         String(source.siteName || defaults.siteName)
           .trim()
           .slice(0, 80) || defaults.siteName,
-      apiBackends: normalizeApiBackends(source.apiBackends, issues),
+      apiBackends: normalizeApiBackends(source.apiBackends, issues, { requireHttps: requireSecureBackends }),
       enableShortUrl,
       shortUrl,
       menuItem: normalizeMenuItems(source.menuItem, issues),

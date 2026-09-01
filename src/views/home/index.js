@@ -1,28 +1,12 @@
-export const TEXT_PARAMETERS = ['include', 'exclude', 'group', 'filename', 'interval', 'dev_id', 'rename'];
-export const BASE64_PARAMETERS = ['groups', 'ruleset'];
-export const BOOLEAN_PARAMETERS = [
-  'emoji',
-  'add_emoji',
-  'remove_emoji',
-  'append_type',
-  'tfo',
-  'udp',
-  'list',
-  'sort',
-  'sort_script',
-  'script',
-  'insert',
-  'scv',
-  'fdn',
-  'expand',
-  'append_info',
-  'prepend',
-  'classic',
-  'tls13',
-  'provider_proxy_direct',
-  'new_name',
-  'strict',
-];
+import {
+  BASE64_PARAMETERS,
+  BOOLEAN_PARAMETERS,
+  TEXT_PARAMETERS,
+  countActiveOptions as countProfileOptions,
+  filterMoreConfig,
+} from '../../converter/profiles.js';
+
+export { BASE64_PARAMETERS, BOOLEAN_PARAMETERS, TEXT_PARAMETERS };
 
 function bytesToBase64(value) {
   const bytes = new TextEncoder().encode(value);
@@ -80,14 +64,19 @@ export function normalizeRemoteConfigUrl(value) {
   return url.href;
 }
 
-export function countActiveOptions(moreConfig = {}) {
-  return [...TEXT_PARAMETERS, ...BASE64_PARAMETERS, ...BOOLEAN_PARAMETERS].filter((name) => {
-    const value = moreConfig[name];
-    return typeof value === 'string' ? value.trim() !== '' : value !== undefined && value !== null;
-  }).length;
+export function countActiveOptions(moreConfig = {}, backendType = 'legacy', target = 'clash', capabilities) {
+  return countProfileOptions(moreConfig, backendType, target, capabilities);
 }
 
-export function getSubLink({ urls, api, target, remoteConfig = '', moreConfig = {} }) {
+export function getSubLink({
+  urls,
+  api,
+  target,
+  remoteConfig = '',
+  moreConfig = {},
+  backendType = 'legacy',
+  capabilities,
+}) {
   const normalizedApi = normalizeApiBaseUrl(api);
   const normalizedSources = urls
     .split(/\r?\n|\|/)
@@ -113,20 +102,25 @@ export function getSubLink({ urls, api, target, remoteConfig = '', moreConfig = 
     params.set('config', normalizedRemoteConfig);
   }
 
+  const effectiveConfig = filterMoreConfig(moreConfig, backendType, target, capabilities);
+  if (backendType === 'sce' && effectiveConfig.script === 'true' && effectiveConfig.expand === 'true') {
+    throw new TypeError('Clash Script 与内联展开规则集不能同时开启');
+  }
+
   for (const name of TEXT_PARAMETERS) {
-    const value = String(moreConfig[name] ?? '').trim();
+    const value = String(effectiveConfig[name] ?? '').trim();
     if (value) {
       params.set(name, value);
     }
   }
   for (const name of BASE64_PARAMETERS) {
-    const value = String(moreConfig[name] ?? '').trim();
+    const value = String(effectiveConfig[name] ?? '').trim();
     if (value) {
       params.set(name, toUrlSafeBase64(value));
     }
   }
   for (const name of BOOLEAN_PARAMETERS) {
-    const value = moreConfig[name];
+    const value = effectiveConfig[name];
     if (value === 'true' || value === 'false') {
       params.set(name, value);
     }

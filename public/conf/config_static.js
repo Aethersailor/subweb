@@ -4,6 +4,7 @@ window.config = {
     {
       name: '官方公共服务（订阅内容会发送至此）',
       url: 'https://sub.xeton.dev',
+      type: 'auto',
     },
   ],
   enableShortUrl: false,
