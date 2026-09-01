@@ -81,8 +81,14 @@ function normalizeApiBackends(value, issues, { requireHttps = false } = {}) {
     if (!url) {
       return [];
     }
-    const type = ['auto', 'sce', 'legacy'].includes(item?.type) ? item.type : 'auto';
-    if (item?.type !== undefined && item.type !== type) {
+    const requestedType = item?.type;
+    const type =
+      requestedType === 'sce'
+        ? 'subconverter-extended'
+        : ['auto', 'subconverter-extended', 'legacy'].includes(requestedType)
+          ? requestedType
+          : 'auto';
+    if (requestedType !== undefined && !['auto', 'sce', 'subconverter-extended', 'legacy'].includes(requestedType)) {
       issues.push(`后端 ${String(item?.name || new URL(url).host)} 的 type 无效，已使用 auto`);
     }
     return [{ name: String(item?.name || new URL(url).host).trim(), url: url.replace(/\/+$/, ''), type }];

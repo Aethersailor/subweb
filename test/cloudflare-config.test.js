@@ -42,15 +42,15 @@ test('Pages Function 保留后端类型、拒绝不安全后端并限制请求�
     request: new Request('https://sub.example.com/conf/config.js'),
     env: {
       API_BACKENDS: JSON.stringify([
-        { name: 'SCE', url: 'https://api.example.com', type: 'sce' },
+        { name: 'SubConverter-Extended', url: 'https://api.example.com', type: 'subconverter-extended' },
         { name: '传统', url: 'https://legacy.example.com', type: 'legacy' },
-        { name: '不安全', url: 'http://plain.example.com', type: 'sce' },
+        { name: '不安全', url: 'http://plain.example.com', type: 'subconverter-extended' },
       ]),
     },
   });
   const config = parseConfigScript(await response.text());
   assert.deepEqual(config.apiBackends, [
-    { name: 'SCE', url: 'https://api.example.com', type: 'sce' },
+    { name: 'SubConverter-Extended', url: 'https://api.example.com', type: 'subconverter-extended' },
     { name: '传统', url: 'https://legacy.example.com', type: 'legacy' },
   ]);
 

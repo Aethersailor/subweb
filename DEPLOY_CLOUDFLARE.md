@@ -1,6 +1,6 @@
 # Cloudflare Pages 部署指南
 
-SubWeb 以 Cloudflare Pages 为主要部署平台。Pages 提供静态前端和运行时配置接口；订阅转换仍由浏览器直接请求所选的 SubConverter 或 SubConverter-Extended（SCE）后端。
+SubWeb 以 Cloudflare Pages 为主要部署平台。Pages 提供静态前端和运行时配置接口；订阅转换仍由浏览器直接请求所选的 SubConverter 或 SubConverter-Extended 后端。
 
 ## 部署边界
 
@@ -10,7 +10,7 @@ SubWeb 以 Cloudflare Pages 为主要部署平台。Pages 提供静态前端和�
 - 短链接功能会把完整转换链接发送到单独配置的短链接服务，默认关闭。
 - Docker 部署仍受支持，但不是本指南的主要部署方式。
 
-因此，部署 SubWeb 之前仍需准备可公开访问的转换后端。SCE 和传统后端可以同时配置。
+因此，部署 SubWeb 之前仍需准备可公开访问的转换后端。SubConverter-Extended 和传统后端可以同时配置。
 
 ## 连接 Git 仓库
 
@@ -54,7 +54,7 @@ Pages 通过 HTTPS 提供页面，因此 `API_URL`、`API_BACKENDS` 中的后端
   {
     "name": "SubConverter-Extended 增强型后端",
     "url": "https://api.example.com",
-    "type": "sce"
+    "type": "subconverter-extended"
   },
   {
     "name": "subconverter 传统型后端",
@@ -66,13 +66,13 @@ Pages 通过 HTTPS 提供页面，因此 `API_URL`、`API_BACKENDS` 中的后端
 
 `type` 支持以下值：
 
-| 值       | 行为                                                    |
-| -------- | ------------------------------------------------------- |
-| `auto`   | 根据 `/version` 自动判断；省略 `type` 时使用此值        |
-| `sce`    | 探测失败时使用内置 SCE 能力；探测结果冲突时暂停专用能力 |
-| `legacy` | 使用传统后端界面和参数                                  |
+| 值                      | 行为                                                                      |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `auto`                  | 根据 `/version` 自动判断；省略 `type` 时使用此值                          |
+| `subconverter-extended` | 探测失败时使用内置 SubConverter-Extended 能力；探测结果冲突时暂停专用能力 |
+| `legacy`                | 使用传统后端界面和参数                                                    |
 
-公开部署已知后端时，建议显式配置 `sce` 或 `legacy`。用户手工输入的后端使用自动判断。
+公开部署已知后端时，建议显式配置 `subconverter-extended` 或 `legacy`。用户手工输入的后端使用自动判断。
 
 ### 远程配置和菜单
 
@@ -112,8 +112,8 @@ Pages 可以为同仓库分支和 Pull Request 创建独立预览部署。预览
 
 1. `/version.json` 中的 `revision` 等于预览部署提交。
 2. `/conf/config.js` 返回预期的后端和 `type`。
-3. SCE 与传统后端切换后，目标客户端列表正确变化。
-4. SCE 专用参数不会进入传统后端链接。
+3. SubConverter-Extended 与传统后端切换后，目标客户端列表正确变化。
+4. SubConverter-Extended 专用参数不会进入传统后端链接。
 5. 浏览器控制台没有新的脚本、CSP 或运行时错误。
 
 ## 自定义域名
@@ -135,7 +135,7 @@ Pages 可以为同仓库分支和 Pull Request 创建独立预览部署。预览
 ## 隐私和安全
 
 - 转换链接可能包含订阅凭据。不要把链接、诊断 JSON 或浏览器日志公开粘贴到 Issue。
-- SCE 诊断会立即把当前来源发送到所选后端，因此前端会在请求前确认。
+- SubConverter-Extended 诊断会立即把当前来源发送到所选后端，因此前端会在请求前确认。
 - Base64 是编码，不是加密。
 - `provider_headers` 只填写 Header 名称。SubWeb 不收集或保存 Header 值。
 - 短链接服务会收到完整转换链接。只在信任该服务时启用。
@@ -148,7 +148,7 @@ Pages 可以为同仓库分支和 Pull Request 创建独立预览部署。预览
 1. 在 Pages 项目的 **Deployments** 中选择上一个成功的生产部署。
 2. 执行 **Rollback to this deployment**。
 3. 验证 `/version.json` 已恢复到预期提交。
-4. 验证 `/conf/config.js`、SCE 模式和传统模式。
+4. 验证 `/conf/config.js`、SubConverter-Extended 模式和传统模式。
 
 预览部署不能作为生产回滚目标。回滚完成前，不要删除出现问题的部署和构建日志。
 

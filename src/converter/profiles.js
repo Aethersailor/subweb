@@ -46,7 +46,11 @@ export const BOOLEAN_PARAMETER_OPTIONS = Object.freeze([
   { key: 'append_type', label: '追加节点类型', hint: '在节点名后追加协议类型' },
   { key: 'tfo', label: 'TCP Fast Open', hint: '启用 TCP Fast Open' },
   { key: 'udp', label: 'UDP', hint: '启用 UDP 转发' },
-  { key: 'list', label: '服务端展开节点', hint: 'SCE 默认使用远程资源；开启后由后端解析并展开节点' },
+  {
+    key: 'list',
+    label: '服务端展开节点',
+    hint: 'SubConverter-Extended 默认使用远程资源；开启后由后端解析并展开节点',
+  },
   { key: 'sort', label: '排序节点', hint: '按后端规则排序节点' },
   { key: 'sort_script', label: '使用排序脚本', hint: '排序开启时使用后端配置的排序脚本' },
   { key: 'script', label: 'Clash Script', hint: '生成 Clash Script 配置' },
@@ -85,7 +89,7 @@ export const LEGACY_TARGET_OPTIONS = Object.freeze([
   { value: 'singbox', text: 'Sing-box' },
 ]);
 
-const SCE_TARGET_NAMES = Object.freeze([
+const SUBCONVERTER_EXTENDED_TARGET_NAMES = Object.freeze([
   'auto',
   'clash',
   'clashr',
@@ -148,18 +152,18 @@ function expandTarget(name) {
 }
 
 export function getTargetOptions(backendType) {
-  if (backendType !== BACKEND_TYPES.SCE) {
+  if (backendType !== BACKEND_TYPES.SUBCONVERTER_EXTENDED) {
     return LEGACY_TARGET_OPTIONS;
   }
-  return SCE_TARGET_NAMES.flatMap(expandTarget);
+  return SUBCONVERTER_EXTENDED_TARGET_NAMES.flatMap(expandTarget);
 }
 
 export function baseTarget(target) {
   return String(target || '').split('&', 1)[0];
 }
 
-const SCE_UNSUPPORTED = new Set(['groups', 'ruleset', 'new_name']);
-const SCE_TARGET_CONSTRAINTS = Object.freeze({
+const SUBCONVERTER_EXTENDED_UNSUPPORTED = new Set(['groups', 'ruleset', 'new_name']);
+const SUBCONVERTER_EXTENDED_TARGET_CONSTRAINTS = Object.freeze({
   dev_id: ['quanx'],
   provider_headers: ['clash', 'stash'],
   provider_proxy_direct: ['clash', 'clashr'],
@@ -168,14 +172,14 @@ const SCE_TARGET_CONSTRAINTS = Object.freeze({
 });
 
 export function isParameterAvailable(name, backendType, target) {
-  if (backendType !== BACKEND_TYPES.SCE) {
+  if (backendType !== BACKEND_TYPES.SUBCONVERTER_EXTENDED) {
     return name !== 'provider_headers';
   }
-  if (SCE_UNSUPPORTED.has(name)) {
+  if (SUBCONVERTER_EXTENDED_UNSUPPORTED.has(name)) {
     return false;
   }
   const targetName = baseTarget(target);
-  const constraints = SCE_TARGET_CONSTRAINTS[name];
+  const constraints = SUBCONVERTER_EXTENDED_TARGET_CONSTRAINTS[name];
   return !constraints || constraints.includes(targetName);
 }
 

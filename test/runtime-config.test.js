@@ -48,13 +48,19 @@ test('后端类型保持向后兼容并规范化无效值', () => {
   const { config, issues } = normalizeRuntimeConfig({
     ...DEFAULT_RUNTIME_CONFIG,
     apiBackends: [
-      { name: 'SCE', url: 'https://sce.example.com', type: 'sce' },
+      { name: 'SubConverter-Extended', url: 'https://extended.example.com', type: 'subconverter-extended' },
+      { name: '旧简称配置', url: 'https://alias.example.com', type: 'sce' },
       { name: '旧配置', url: 'https://legacy.example.com' },
       { name: '错误类型', url: 'https://unknown.example.com', type: 'extended' },
     ],
   });
   assert.deepEqual(config.apiBackends, [
-    { name: 'SCE', url: 'https://sce.example.com', type: 'sce' },
+    {
+      name: 'SubConverter-Extended',
+      url: 'https://extended.example.com',
+      type: 'subconverter-extended',
+    },
+    { name: '旧简称配置', url: 'https://alias.example.com', type: 'subconverter-extended' },
     { name: '旧配置', url: 'https://legacy.example.com', type: 'auto' },
     { name: '错误类型', url: 'https://unknown.example.com', type: 'auto' },
   ]);
