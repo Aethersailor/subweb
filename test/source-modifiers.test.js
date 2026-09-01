@@ -7,7 +7,7 @@ import {
   validateSourceItems,
 } from '../src/converter/source-modifiers.js';
 
-test('解析并规范化 SCE 来源前缀', () => {
+test('解析并规范化 SubConverter-Extended 来源前缀', () => {
   assert.deepEqual(parseSourceItem('tag:香港,provider:机场,interval:3600,proxy_direct:false,https://example.com/sub'), {
     url: 'https://example.com/sub',
     tag: '香港',

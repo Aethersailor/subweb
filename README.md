@@ -58,7 +58,7 @@ SubWeb 是一个轻量的 **Vue 3** [subconverter](https://github.com/tindy2013/
 
 ### 方式一：Cloudflare Pages（推荐）
 
-> Pages 承载前端和运行时配置；订阅转换仍需要可公开访问的 SCE 或传统后端。
+> Pages 承载前端和运行时配置；订阅转换仍需要可公开访问的 SubConverter-Extended 或传统后端。
 
 **详细教程请参阅 → [DEPLOY_CLOUDFLARE.md](DEPLOY_CLOUDFLARE.md)**
 
@@ -120,7 +120,7 @@ window.config = {
     {
       name: 'Aethersailor 后端',
       url: 'https://api.asailor.org',
-      type: 'sce',
+      type: 'subconverter-extended',
     },
     {
       name: '肥羊增强型后端',

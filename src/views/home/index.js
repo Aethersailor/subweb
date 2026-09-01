@@ -95,7 +95,11 @@ export function getSubLink({ urls, api, target, remoteConfig = '', moreConfig = 
   }
 
   const effectiveConfig = filterMoreConfig(moreConfig, backendType, target);
-  if (backendType === 'sce' && effectiveConfig.script === 'true' && effectiveConfig.expand === 'true') {
+  if (
+    backendType === 'subconverter-extended' &&
+    effectiveConfig.script === 'true' &&
+    effectiveConfig.expand === 'true'
+  ) {
     throw new TypeError('Clash Script 与内联展开规则集不能同时开启');
   }
 

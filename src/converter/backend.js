@@ -1,12 +1,15 @@
 export const BACKEND_TYPES = Object.freeze({
   AUTO: 'auto',
-  SCE: 'sce',
+  SUBCONVERTER_EXTENDED: 'subconverter-extended',
   LEGACY: 'legacy',
   UNKNOWN: 'unknown',
 });
 
 export function normalizeBackendType(value) {
-  return value === BACKEND_TYPES.SCE || value === BACKEND_TYPES.LEGACY ? value : BACKEND_TYPES.AUTO;
+  if (value === BACKEND_TYPES.SUBCONVERTER_EXTENDED || value === 'sce') {
+    return BACKEND_TYPES.SUBCONVERTER_EXTENDED;
+  }
+  return value === BACKEND_TYPES.LEGACY ? value : BACKEND_TYPES.AUTO;
 }
 
 export function parseBackendIdentity(value) {
@@ -14,13 +17,13 @@ export function parseBackendIdentity(value) {
     .trim()
     .replace(/\s+/g, ' ')
     .slice(0, 240);
-  const sceMatch = raw.match(/^SubConverter-Extended\s+([^\s]+)\s+backend$/i);
-  if (sceMatch) {
-    const token = sceMatch[1];
+  const extendedMatch = raw.match(/^SubConverter-Extended\s+([^\s]+)\s+backend$/i);
+  if (extendedMatch) {
+    const token = extendedMatch[1];
     const stable = token.match(/^(v\d+\.\d+\.\d+)(?:-([0-9a-f]{7,40}))?$/i);
     const development = token.match(/^dev(?:-([0-9a-f]{7,40}))?$/i);
     return {
-      family: BACKEND_TYPES.SCE,
+      family: BACKEND_TYPES.SUBCONVERTER_EXTENDED,
       version: stable?.[1] || (development ? 'dev' : token),
       channel: stable ? 'stable' : development ? 'dev' : 'unknown',
       revision: stable?.[2] || development?.[1] || '',

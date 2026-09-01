@@ -27,10 +27,14 @@
       <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
     </div>
 
-    <section v-if="isSce" class="sce-source-overview" aria-label="SCE 专属订阅来源参数">
-      <div class="sce-source-overview-heading">
+    <section
+      v-if="isSubConverterExtended"
+      class="subconverter-extended-source-overview"
+      aria-label="SubConverter-Extended 专属订阅来源参数"
+    >
+      <div class="subconverter-extended-source-overview-heading">
         <div>
-          <span class="sce-only-badge">SCE 专属</span>
+          <span class="subconverter-extended-only-badge">SubConverter-Extended 专属</span>
           <h3>订阅链接前缀参数</h3>
         </div>
         <button type="button" class="secondary-button compact-button" @click="toggleSourceEditor">
@@ -38,38 +42,42 @@
         </button>
       </div>
       <p>SubWeb 会把下列参数放在每条订阅链接之前，并按当前目标客户端检查是否可用。</p>
-      <div class="sce-source-capabilities">
-        <div class="sce-source-capability">
+      <div class="subconverter-extended-source-capabilities">
+        <div class="subconverter-extended-source-capability">
           <code>tag:</code>
           <span>标记订阅来源，供远程资源和分组匹配使用</span>
           <small>Clash / ClashR、Surge、QuanX、Loon、Surfboard、Stash</small>
         </div>
-        <div class="sce-source-capability">
+        <div class="subconverter-extended-source-capability">
           <code>provider:</code>
           <span>指定生成的 Provider 或远程资源名称</span>
           <small>Clash / ClashR、Surge、QuanX、Loon、Surfboard、Stash</small>
         </div>
-        <div class="sce-source-capability">
+        <div class="subconverter-extended-source-capability">
           <code>interval:</code>
           <span>为单条远程订阅指定更新间隔</span>
           <small>Clash / ClashR、Surge、QuanX、Stash</small>
         </div>
-        <div class="sce-source-capability">
+        <div class="subconverter-extended-source-capability">
           <code>proxy_direct:</code>
           <span>控制 Provider 下载时直连或跟随代理设置</span>
           <small>仅 Clash / ClashR</small>
         </div>
       </div>
-      <div class="sce-syntax-example">
+      <div class="subconverter-extended-syntax-example">
         <span>示例</span>
         <code>provider:机场 A,interval:3600,proxy_direct:true,https://example.com/sub</code>
       </div>
     </section>
 
-    <section v-if="isSce && isShowSourceEditor" class="source-editor reveal-block" aria-label="SCE 来源参数">
+    <section
+      v-if="isSubConverterExtended && isShowSourceEditor"
+      class="source-editor reveal-block"
+      aria-label="SubConverter-Extended 来源参数"
+    >
       <div class="options-heading">
         <div>
-          <h3>SCE 来源参数</h3>
+          <h3>SubConverter-Extended 来源参数</h3>
           <span>按目标客户端限制可用字段；应用后会写回上方来源列表。</span>
         </div>
         <button type="button" class="text-button" @click="addSourceItem">添加来源</button>
@@ -264,8 +272,8 @@
       <div class="options-section">
         <div class="options-heading">
           <h3>节点重命名与自定义配置</h3>
-          <span v-if="!isSce">自定义分组和规则会编码为 URL-safe Base64</span>
-          <span v-else>SCE 使用远程配置提供自定义分组和规则</span>
+          <span v-if="!isSubConverterExtended">自定义分组和规则会编码为 URL-safe Base64</span>
+          <span v-else>SubConverter-Extended 使用远程配置提供自定义分组和规则</span>
         </div>
         <div class="advanced-inputs">
           <div class="field">
@@ -277,7 +285,7 @@
               placeholder="正则@替换，多个规则使用 ` 分隔"
             ></textarea>
           </div>
-          <div v-if="!isSce" class="field">
+          <div v-if="!isSubConverterExtended" class="field">
             <label for="groups">自定义代理组</label>
             <textarea
               id="groups"
@@ -286,11 +294,11 @@
               placeholder="custom_proxy_group=...，多个项目使用 @ 分隔"
             ></textarea>
           </div>
-          <div v-if="isSce" class="capability-notice">
-            SCE 固定使用 Mihomo 新字段；<code>groups</code> 和 <code>ruleset</code>
+          <div v-if="isSubConverterExtended" class="capability-notice">
+            SubConverter-Extended 固定使用 Mihomo 新字段；<code>groups</code> 和 <code>ruleset</code>
             请求参数不会生效。请通过上方「远程配置」提供分组和规则。
           </div>
-          <div v-if="!isSce" class="field">
+          <div v-if="!isSubConverterExtended" class="field">
             <label for="ruleset">自定义规则集</label>
             <textarea
               id="ruleset"
@@ -356,16 +364,16 @@
       </button>
     </div>
 
-    <div v-if="isSce" class="diagnostic-actions">
+    <div v-if="isSubConverterExtended" class="diagnostic-actions">
       <button class="secondary-button" type="button" :disabled="diagnostics.loading" @click="runDiagnostics">
         <span v-if="diagnostics.loading" class="spinner" aria-hidden="true"></span>
-        {{ diagnostics.loading ? '正在诊断' : '让 SCE 诊断本次转换' }}
+        {{ diagnostics.loading ? '正在诊断' : '让 SubConverter-Extended 诊断本次转换' }}
       </button>
-      <span class="field-hint">诊断会立即把来源发送到当前 SCE 后端，但不会上传或生成短链接。</span>
+      <span class="field-hint"> 诊断会立即把来源发送到当前 SubConverter-Extended 后端，但不会上传或生成短链接。 </span>
     </div>
 
     <section v-if="diagnostics.payload || diagnostics.error" class="diagnostic-panel reveal-block" aria-live="polite">
-      <h3>SCE 诊断结果</h3>
+      <h3>SubConverter-Extended 诊断结果</h3>
       <p v-if="diagnostics.error" class="diagnostic-error">{{ diagnostics.error }}</p>
       <template v-else>
         <p>{{ diagnosticSummary }}</p>
@@ -439,7 +447,7 @@ export default {
       isShowRemoteConfig: false,
       isShowSourceEditor: false,
       sourceItems: [],
-      sceSourceModifiersApplied: false,
+      extendedSourceModifiersApplied: false,
       result: {
         subUrl: '',
         shortUrl: '',
@@ -464,7 +472,7 @@ export default {
       backendProbeRequestId: 0,
       lastTargetByBackend: {
         legacy: 'clash',
-        sce: 'clash',
+        'subconverter-extended': 'clash',
       },
       diagnostics: {
         loading: false,
@@ -484,10 +492,12 @@ export default {
       return countSuppressedOptions(this.moreConfig, this.backendType, this.target);
     },
     backendType() {
-      return this.backendProbe.type === BACKEND_TYPES.SCE ? BACKEND_TYPES.SCE : BACKEND_TYPES.LEGACY;
+      return this.backendProbe.type === BACKEND_TYPES.SUBCONVERTER_EXTENDED
+        ? BACKEND_TYPES.SUBCONVERTER_EXTENDED
+        : BACKEND_TYPES.LEGACY;
     },
-    isSce() {
-      return this.backendType === BACKEND_TYPES.SCE;
+    isSubConverterExtended() {
+      return this.backendType === BACKEND_TYPES.SUBCONVERTER_EXTENDED;
     },
     targetOptions() {
       return getTargetOptions(this.backendType);
@@ -503,8 +513,8 @@ export default {
         return '正在探测后端';
       }
       if (this.backendProbe.state === 'online') {
-        if (this.backendProbe.type === BACKEND_TYPES.SCE) {
-          return `在线 · SCE · ${this.backendProbe.version} · 已启用专用适配`;
+        if (this.backendProbe.type === BACKEND_TYPES.SUBCONVERTER_EXTENDED) {
+          return `在线 · SubConverter-Extended · ${this.backendProbe.version} · 已启用专用适配`;
         }
         if (this.backendProbe.type === BACKEND_TYPES.LEGACY) {
           return `在线 · 传统后端 · ${this.backendProbe.version}`;
@@ -512,8 +522,8 @@ export default {
         return `在线 · 后端类型未确认 · ${this.backendProbe.version}`;
       }
       if (this.backendProbe.state === 'unreachable') {
-        if (this.backendProbe.type === BACKEND_TYPES.SCE) {
-          return '浏览器无法验证后端；按站点配置使用 SCE 内置能力';
+        if (this.backendProbe.type === BACKEND_TYPES.SUBCONVERTER_EXTENDED) {
+          return '浏览器无法验证后端；按站点配置使用 SubConverter-Extended 内置能力';
         }
         if (this.backendProbe.type === BACKEND_TYPES.LEGACY) {
           return '浏览器无法验证后端；按站点配置使用传统模式';
@@ -653,7 +663,9 @@ export default {
         const resolvedType = resolveBackendType(configuredType, identity.family, true);
         let warning = '';
         if (resolvedType === BACKEND_TYPES.UNKNOWN && configuredType !== BACKEND_TYPES.AUTO) {
-          warning = `站点把后端配置为 ${configuredType === BACKEND_TYPES.SCE ? 'SCE' : '传统模式'}，但 /version 返回了不同类型；已暂停专用能力。`;
+          warning = `站点把后端配置为 ${
+            configuredType === BACKEND_TYPES.SUBCONVERTER_EXTENDED ? 'SubConverter-Extended' : '传统模式'
+          }，但 /version 返回了不同类型；已暂停专用能力。`;
         }
         if (requestId !== this.backendProbeRequestId) return;
         this.setBackendProbe({
@@ -676,7 +688,9 @@ export default {
           warning:
             fallbackType === BACKEND_TYPES.UNKNOWN
               ? ''
-              : `未能验证后端身份，暂按站点配置使用${fallbackType === BACKEND_TYPES.SCE ? ' SCE 内置能力' : '传统模式'}。`,
+              : `未能验证后端身份，暂按站点配置使用${
+                  fallbackType === BACKEND_TYPES.SUBCONVERTER_EXTENDED ? ' SubConverter-Extended 内置能力' : '传统模式'
+                }。`,
         });
       } finally {
         window.clearTimeout(timeoutId);
@@ -720,7 +734,7 @@ export default {
         this.isShowSourceEditor = false;
         this.sourceItems = [];
       }
-      this.sceSourceModifiersApplied = false;
+      this.extendedSourceModifiersApplied = false;
       this.diagnostics = { loading: false, payload: null, error: '' };
     },
     toggleSourceEditor() {
@@ -743,7 +757,7 @@ export default {
     applySourceItems() {
       try {
         this.urls = serializeSceSourceItems(this.sourceItems, this.target);
-        this.sceSourceModifiersApplied = this.sourceItems.some((item) =>
+        this.extendedSourceModifiersApplied = this.sourceItems.some((item) =>
           ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
         );
         this.isShowSourceEditor = false;
@@ -795,10 +809,10 @@ export default {
     getConverter() {
       this.clearFormMessage();
       this.result = { subUrl: '', shortUrl: '' };
-      if (this.isSce && this.isShowSourceEditor) {
+      if (this.isSubConverterExtended && this.isShowSourceEditor) {
         try {
           this.urls = serializeSceSourceItems(this.sourceItems, this.target);
-          this.sceSourceModifiersApplied = this.sourceItems.some((item) =>
+          this.extendedSourceModifiersApplied = this.sourceItems.some((item) =>
             ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
           );
         } catch (error) {
@@ -810,11 +824,14 @@ export default {
         this.setFormMessage('请输入订阅链接或节点。', 'urls');
         return false;
       }
-      if (!this.isSce && this.sceSourceModifiersApplied) {
-        this.setFormMessage('来源包含由 SCE 编辑器生成的专用参数。请切回 SCE，或手工清除这些前缀。', 'urls');
+      if (!this.isSubConverterExtended && this.extendedSourceModifiersApplied) {
+        this.setFormMessage(
+          '来源包含由 SubConverter-Extended 编辑器生成的专用参数。请切回 SubConverter-Extended，或手工清除这些前缀。',
+          'urls',
+        );
         return false;
       }
-      if (this.isSce) {
+      if (this.isSubConverterExtended) {
         try {
           validateSourceItems(parseSourceItems(this.urls), this.target);
         } catch (error) {
@@ -859,7 +876,7 @@ export default {
       }
     },
     async runDiagnostics() {
-      if (!window.confirm('诊断会立即把当前来源发送到所选 SCE 后端。确认继续吗？')) {
+      if (!window.confirm('诊断会立即把当前来源发送到所选 SubConverter-Extended 后端。确认继续吗？')) {
         return;
       }
       if (!this.getConverter()) return;
@@ -1281,7 +1298,7 @@ select {
   color: var(--danger);
 }
 
-.sce-source-overview {
+.subconverter-extended-source-overview {
   display: grid;
   gap: 14px;
   padding: 18px;
@@ -1290,36 +1307,36 @@ select {
   border-radius: 22px;
 }
 
-.sce-source-overview-heading {
+.subconverter-extended-source-overview-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
-.sce-source-overview-heading > div {
+.subconverter-extended-source-overview-heading > div {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.sce-source-overview h3,
-.sce-source-overview p {
+.subconverter-extended-source-overview h3,
+.subconverter-extended-source-overview p {
   margin: 0;
 }
 
-.sce-source-overview h3 {
+.subconverter-extended-source-overview h3 {
   color: var(--text-primary);
   font-size: 0.96rem;
 }
 
-.sce-source-overview p {
+.subconverter-extended-source-overview p {
   color: var(--text-muted);
   font-size: 0.8rem;
   line-height: 1.55;
 }
 
-.sce-only-badge {
+.subconverter-extended-only-badge {
   padding: 5px 8px;
   color: var(--accent-blue);
   font-size: 0.7rem;
@@ -1330,13 +1347,13 @@ select {
   border-radius: 999px;
 }
 
-.sce-source-capabilities {
+.subconverter-extended-source-capabilities {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.sce-source-capability {
+.subconverter-extended-source-capability {
   display: grid;
   min-width: 0;
   gap: 5px;
@@ -1346,8 +1363,8 @@ select {
   border-radius: 14px;
 }
 
-.sce-source-capability code,
-.sce-syntax-example code,
+.subconverter-extended-source-capability code,
+.subconverter-extended-syntax-example code,
 .source-syntax-preview code {
   color: var(--accent-blue);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -1355,19 +1372,19 @@ select {
   font-weight: 800;
 }
 
-.sce-source-capability span {
+.subconverter-extended-source-capability span {
   color: var(--text-secondary);
   font-size: 0.78rem;
   line-height: 1.45;
 }
 
-.sce-source-capability small {
+.subconverter-extended-source-capability small {
   color: var(--text-muted);
   font-size: 0.68rem;
   line-height: 1.4;
 }
 
-.sce-syntax-example,
+.subconverter-extended-syntax-example,
 .source-syntax-preview {
   display: grid;
   gap: 6px;
@@ -1377,14 +1394,14 @@ select {
   border-radius: 12px;
 }
 
-.sce-syntax-example span,
+.subconverter-extended-syntax-example span,
 .source-syntax-preview span {
   color: var(--text-muted);
   font-size: 0.68rem;
   font-weight: 700;
 }
 
-.sce-syntax-example code,
+.subconverter-extended-syntax-example code,
 .source-syntax-preview code {
   overflow-wrap: anywhere;
   white-space: normal;
@@ -1630,17 +1647,17 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .sce-source-overview-heading,
+  .subconverter-extended-source-overview-heading,
   .diagnostic-actions {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .sce-source-overview-heading .secondary-button {
+  .subconverter-extended-source-overview-heading .secondary-button {
     width: 100%;
   }
 
-  .sce-source-capabilities {
+  .subconverter-extended-source-capabilities {
     grid-template-columns: 1fr;
   }
 
