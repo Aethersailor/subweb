@@ -24,13 +24,47 @@
         spellcheck="false"
         @input="handleUrlsInput"
       ></textarea>
-      <div class="field-hint-row">
-        <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
-        <button v-if="isSce" type="button" class="text-button" @click="toggleSourceEditor">
-          {{ isShowSourceEditor ? '关闭来源参数' : '设置 SCE 来源参数' }}
+      <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
+    </div>
+
+    <section v-if="isSce" class="sce-source-overview" aria-label="SCE 专属订阅来源参数">
+      <div class="sce-source-overview-heading">
+        <div>
+          <span class="sce-only-badge">SCE 专属</span>
+          <h3>订阅链接前缀参数</h3>
+        </div>
+        <button type="button" class="secondary-button compact-button" @click="toggleSourceEditor">
+          {{ isShowSourceEditor ? '收起逐条配置' : '逐条配置来源参数' }}
         </button>
       </div>
-    </div>
+      <p>SubWeb 会把下列参数放在每条订阅链接之前，并按当前目标客户端检查是否可用。</p>
+      <div class="sce-source-capabilities">
+        <div class="sce-source-capability">
+          <code>tag:</code>
+          <span>标记订阅来源，供远程资源和分组匹配使用</span>
+          <small>Clash / ClashR、Surge、QuanX、Loon、Surfboard、Stash</small>
+        </div>
+        <div class="sce-source-capability">
+          <code>provider:</code>
+          <span>指定生成的 Provider 或远程资源名称</span>
+          <small>Clash / ClashR、Surge、QuanX、Loon、Surfboard、Stash</small>
+        </div>
+        <div class="sce-source-capability">
+          <code>interval:</code>
+          <span>为单条远程订阅指定更新间隔</span>
+          <small>Clash / ClashR、Surge、QuanX、Stash</small>
+        </div>
+        <div class="sce-source-capability">
+          <code>proxy_direct:</code>
+          <span>控制 Provider 下载时直连或跟随代理设置</span>
+          <small>仅 Clash / ClashR</small>
+        </div>
+      </div>
+      <div class="sce-syntax-example">
+        <span>示例</span>
+        <code>provider:机场 A,interval:3600,proxy_direct:true,https://example.com/sub</code>
+      </div>
+    </section>
 
     <section v-if="isSce && isShowSourceEditor" class="source-editor reveal-block" aria-label="SCE 来源参数">
       <div class="options-heading">
@@ -80,6 +114,10 @@
                 </select>
               </div>
             </div>
+          </div>
+          <div class="source-syntax-preview">
+            <span>最终前缀语法</span>
+            <code>{{ sourceItemPreview(item) }}</code>
           </div>
         </article>
       </div>
@@ -377,6 +415,7 @@ import {
 import {
   modifierAvailable,
   parseSourceItems,
+  serializeSourceItem,
   serializeSourceItems as serializeSceSourceItems,
   validateSourceItems,
 } from '@/converter/source-modifiers.js';
@@ -673,6 +712,9 @@ export default {
     sourceModifierAvailable(name) {
       return modifierAvailable(name, this.target);
     },
+    sourceItemPreview(item) {
+      return serializeSourceItem(item) || '填写来源后显示最终语法';
+    },
     handleUrlsInput() {
       if (this.isShowSourceEditor) {
         this.isShowSourceEditor = false;
@@ -961,13 +1003,6 @@ export default {
   line-height: 1.45;
 }
 
-.field-hint-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .form-message {
   padding: 12px 14px;
   color: var(--danger);
@@ -1246,6 +1281,115 @@ select {
   color: var(--danger);
 }
 
+.sce-source-overview {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--accent-blue) 6%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 22%, var(--inner-border));
+  border-radius: 22px;
+}
+
+.sce-source-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sce-source-overview-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sce-source-overview h3,
+.sce-source-overview p {
+  margin: 0;
+}
+
+.sce-source-overview h3 {
+  color: var(--text-primary);
+  font-size: 0.96rem;
+}
+
+.sce-source-overview p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.sce-only-badge {
+  padding: 5px 8px;
+  color: var(--accent-blue);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 25%, transparent);
+  border-radius: 999px;
+}
+
+.sce-source-capabilities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sce-source-capability {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 12px;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+}
+
+.sce-source-capability code,
+.sce-syntax-example code,
+.source-syntax-preview code {
+  color: var(--accent-blue);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.sce-source-capability span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.sce-source-capability small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.sce-syntax-example,
+.source-syntax-preview {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--control-bg) 82%, transparent);
+  border: 1px dashed var(--control-border);
+  border-radius: 12px;
+}
+
+.sce-syntax-example span,
+.source-syntax-preview span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.sce-syntax-example code,
+.source-syntax-preview code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .source-editor,
 .diagnostic-panel {
   display: grid;
@@ -1486,10 +1630,18 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .field-hint-row,
+  .sce-source-overview-heading,
   .diagnostic-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .sce-source-overview-heading .secondary-button {
+    width: 100%;
+  }
+
+  .sce-source-capabilities {
+    grid-template-columns: 1fr;
   }
 
   .backend-status {
