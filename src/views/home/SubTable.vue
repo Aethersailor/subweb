@@ -514,7 +514,7 @@ export default {
     },
     target(value) {
       this.lastTargetByBackend[this.backendType] = value;
-      this.diagnostics = { loading: false, payload: null, error: '' };
+      this.clearGeneratedResults();
       this.clearFormMessage();
     },
   },
@@ -561,6 +561,7 @@ export default {
     setBackendProbe(probe) {
       this.lastTargetByBackend[this.backendType] = this.target;
       this.backendProbe = probe;
+      this.clearGeneratedResults();
       this.clearFormMessage();
       this.$nextTick(() => {
         if (!this.targetOptions.some((option) => option.value === this.target)) {
@@ -646,6 +647,7 @@ export default {
       }
     },
     selectApi(event) {
+      this.clearGeneratedResults();
       if (event.target.value === 'manual') {
         this.api = '';
         this.isShowManualApiUrl = true;
@@ -743,6 +745,10 @@ export default {
     },
     clearFormMessage() {
       this.formMessage = { text: '', field: '', type: 'error' };
+    },
+    clearGeneratedResults() {
+      this.result = { subUrl: '', shortUrl: '' };
+      this.diagnostics = { loading: false, payload: null, error: '' };
     },
     getConverter() {
       this.clearFormMessage();
