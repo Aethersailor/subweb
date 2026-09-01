@@ -147,14 +147,11 @@ function expandTarget(name) {
   return [{ value: name, text: TARGET_LABELS[name] || name }];
 }
 
-export function getTargetOptions(backendType, capabilities) {
+export function getTargetOptions(backendType) {
   if (backendType !== BACKEND_TYPES.SCE) {
     return LEGACY_TARGET_OPTIONS;
   }
-  const supported = Array.isArray(capabilities?.targets)
-    ? capabilities.targets.map((item) => item.name)
-    : SCE_TARGET_NAMES;
-  return supported.flatMap(expandTarget);
+  return SCE_TARGET_NAMES.flatMap(expandTarget);
 }
 
 export function baseTarget(target) {
@@ -170,54 +167,42 @@ const SCE_TARGET_CONSTRAINTS = Object.freeze({
   classic: ['clash', 'clashr'],
 });
 
-export function isParameterAvailable(name, backendType, target, capabilities) {
+export function isParameterAvailable(name, backendType, target) {
   if (backendType !== BACKEND_TYPES.SCE) {
     return name !== 'provider_headers';
   }
   if (SCE_UNSUPPORTED.has(name)) {
     return false;
   }
-  const remoteParameters = capabilities?.query_parameters;
-  if (
-    remoteParameters?.ignored?.includes(name) ||
-    remoteParameters?.internal?.includes(name) ||
-    Object.prototype.hasOwnProperty.call(remoteParameters?.forced || {}, name)
-  ) {
-    return false;
-  }
-  if (Array.isArray(remoteParameters?.recognized) && !remoteParameters.recognized.includes(name)) {
-    return false;
-  }
   const targetName = baseTarget(target);
-  const remoteConstraints = capabilities?.query_parameters?.target_constraints?.[name];
-  const constraints = Array.isArray(remoteConstraints) ? remoteConstraints : SCE_TARGET_CONSTRAINTS[name];
+  const constraints = SCE_TARGET_CONSTRAINTS[name];
   return !constraints || constraints.includes(targetName);
 }
 
-export function availableBooleanParameters(backendType, target, capabilities) {
-  return BOOLEAN_PARAMETER_OPTIONS.filter((item) => isParameterAvailable(item.key, backendType, target, capabilities));
+export function availableBooleanParameters(backendType, target) {
+  return BOOLEAN_PARAMETER_OPTIONS.filter((item) => isParameterAvailable(item.key, backendType, target));
 }
 
-export function availableParameterNames(backendType, target, capabilities) {
+export function availableParameterNames(backendType, target) {
   return [...TEXT_PARAMETERS, ...BASE64_PARAMETERS, ...BOOLEAN_PARAMETERS].filter((name) =>
-    isParameterAvailable(name, backendType, target, capabilities),
+    isParameterAvailable(name, backendType, target),
   );
 }
 
-export function countActiveOptions(moreConfig, backendType, target, capabilities) {
-  return availableParameterNames(backendType, target, capabilities).filter((name) => {
+export function countActiveOptions(moreConfig, backendType, target) {
+  return availableParameterNames(backendType, target).filter((name) => {
     const value = moreConfig?.[name];
     return typeof value === 'string' ? value.trim() !== '' : value !== undefined && value !== null;
   }).length;
 }
 
-export function filterMoreConfig(moreConfig, backendType, target, capabilities) {
-  const allowed = new Set(availableParameterNames(backendType, target, capabilities));
+export function filterMoreConfig(moreConfig, backendType, target) {
+  const allowed = new Set(availableParameterNames(backendType, target));
   return Object.fromEntries(Object.entries(moreConfig || {}).filter(([name]) => allowed.has(name)));
 }
 
-export function countSuppressedOptions(moreConfig, backendType, target, capabilities) {
-  const allowed = new Set(availableParameterNames(backendType, target, capabilities));
+export function countSuppressedOptions(moreConfig, backendType, target) {
+  const allowed = new Set(availableParameterNames(backendType, target));
   return Object.entries(moreConfig || {}).filter(([name, value]) => {
     const active = typeof value === 'string' ? value.trim() !== '' : value !== undefined && value !== null;
     return active && !allowed.has(name);
