@@ -25,7 +25,8 @@ SubWeb 是一个轻量的 **Vue 3** [subconverter](https://github.com/tindy2013/
 ### ✨ 特性亮点
 
 - 🎨 **现代化界面** — 原生 Vue 3 响应式界面，支持键盘操作与深色模式
-- ☁️ **Cloudflare 原生支持** — 新增 Cloudflare Pages/Workers 部署方案，无需服务器
+- ☁️ **Cloudflare Pages 优先** — 静态前端和运行时配置在边缘部署，转换请求直达所选后端
+- 🔍 **后端能力识别** — 自动区分 SubConverter-Extended 与传统后端，并显示对应目标和参数
 - 🔗 **可配置的短链接** — 默认关闭；部署者可按需配置自己的短链接服务
 - 🐳 **Docker 一键部署** — 支持 x86 与 ARM 架构，快速上线
 - ⚙️ **高度可配置** — 支持自定义后端 API、远程配置、站点名称等
@@ -57,7 +58,7 @@ SubWeb 是一个轻量的 **Vue 3** [subconverter](https://github.com/tindy2013/
 
 ### 方式一：Cloudflare Pages（推荐）
 
-> 全套服务均可部署于 Cloudflare 云端，无需服务器或 VPS
+> Pages 承载前端和运行时配置；订阅转换仍需要可公开访问的 SCE 或传统后端。
 
 **详细教程请参阅 → [DEPLOY_CLOUDFLARE.md](DEPLOY_CLOUDFLARE.md)**
 
@@ -119,10 +120,12 @@ window.config = {
     {
       name: 'Aethersailor 后端',
       url: 'https://api.asailor.org',
+      type: 'sce',
     },
     {
       name: '肥羊增强型后端',
       url: 'https://api.v1.mk',
+      type: 'auto',
     },
   ],
 
