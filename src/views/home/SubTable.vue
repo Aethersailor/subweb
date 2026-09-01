@@ -366,15 +366,7 @@ import {
 } from './index.js';
 import showNotification from '@/components/notification';
 import { getRuntimeConfig } from '@/config/runtime.js';
-import {
-  BACKEND_TYPES,
-  assertCapabilitiesMatchIdentity,
-  capabilitiesUrl,
-  normalizeBackendType,
-  parseBackendIdentity,
-  resolveBackendType,
-  validateSceCapabilities,
-} from '@/converter/backend.js';
+import { BACKEND_TYPES, normalizeBackendType, parseBackendIdentity, resolveBackendType } from '@/converter/backend.js';
 import {
   DEFAULT_MORE_CONFIG,
   availableBooleanParameters,
@@ -427,8 +419,6 @@ export default {
         version: '',
         type: BACKEND_TYPES.UNKNOWN,
         configuredType: BACKEND_TYPES.AUTO,
-        capabilities: null,
-        capabilitySource: '',
         warning: '',
       },
       backendProbeController: null,
@@ -449,25 +439,22 @@ export default {
       return this.runtimeConfig.enableShortUrl;
     },
     activeOptionCount() {
-      return countActiveOptions(this.moreConfig, this.backendType, this.target, this.backendCapabilities);
+      return countActiveOptions(this.moreConfig, this.backendType, this.target);
     },
     suppressedOptionCount() {
-      return countSuppressedOptions(this.moreConfig, this.backendType, this.target, this.backendCapabilities);
+      return countSuppressedOptions(this.moreConfig, this.backendType, this.target);
     },
     backendType() {
       return this.backendProbe.type === BACKEND_TYPES.SCE ? BACKEND_TYPES.SCE : BACKEND_TYPES.LEGACY;
-    },
-    backendCapabilities() {
-      return this.backendProbe.capabilities;
     },
     isSce() {
       return this.backendType === BACKEND_TYPES.SCE;
     },
     targetOptions() {
-      return getTargetOptions(this.backendType, this.backendCapabilities);
+      return getTargetOptions(this.backendType);
     },
     availableBooleanParameters() {
-      return availableBooleanParameters(this.backendType, this.target, this.backendCapabilities);
+      return availableBooleanParameters(this.backendType, this.target);
     },
     targetLabel() {
       return this.targetOptions.find((option) => option.value === this.target)?.text || this.target;
@@ -478,8 +465,7 @@ export default {
       }
       if (this.backendProbe.state === 'online') {
         if (this.backendProbe.type === BACKEND_TYPES.SCE) {
-          const source = this.backendProbe.capabilitySource === 'remote' ? '动态能力' : '内置能力';
-          return `在线 · SCE · ${this.backendProbe.version} · ${source}`;
+          return `在线 · SCE · ${this.backendProbe.version} · 已启用专用适配`;
         }
         if (this.backendProbe.type === BACKEND_TYPES.LEGACY) {
           return `在线 · 传统后端 · ${this.backendProbe.version}`;
@@ -566,8 +552,6 @@ export default {
         version: '',
         type: BACKEND_TYPES.UNKNOWN,
         configuredType: BACKEND_TYPES.AUTO,
-        capabilities: null,
-        capabilitySource: '',
         warning: '',
       });
     },
@@ -627,27 +611,9 @@ export default {
         }
         const identity = parseBackendIdentity(body);
         const resolvedType = resolveBackendType(configuredType, identity.family, true);
-        let capabilities = null;
-        let capabilitySource = '';
         let warning = '';
         if (resolvedType === BACKEND_TYPES.UNKNOWN && configuredType !== BACKEND_TYPES.AUTO) {
           warning = `站点把后端配置为 ${configuredType === BACKEND_TYPES.SCE ? 'SCE' : '传统模式'}，但 /version 返回了不同类型；已暂停专用能力。`;
-        } else if (resolvedType === BACKEND_TYPES.SCE) {
-          try {
-            const capabilityResponse = await fetch(capabilitiesUrl(normalizedApi), { signal: controller.signal });
-            if (!capabilityResponse.ok) {
-              throw new Error(`HTTP ${capabilityResponse.status}`);
-            }
-            capabilities = assertCapabilitiesMatchIdentity(
-              validateSceCapabilities(await capabilityResponse.json()),
-              identity,
-            );
-            capabilitySource = 'remote';
-          } catch (error) {
-            if (requestId !== this.backendProbeRequestId) return;
-            capabilitySource = 'bundled';
-            warning = `SCE 能力接口不可用，已使用当前前端内置能力（${error.name === 'AbortError' ? '请求超时' : '无法读取 /capabilities'}）。`;
-          }
         }
         if (requestId !== this.backendProbeRequestId) return;
         this.setBackendProbe({
@@ -655,8 +621,6 @@ export default {
           version: body,
           type: resolvedType,
           configuredType,
-          capabilities,
-          capabilitySource,
           warning,
         });
       } catch {
@@ -669,8 +633,6 @@ export default {
           version: '',
           type: fallbackType,
           configuredType,
-          capabilities: null,
-          capabilitySource: fallbackType === BACKEND_TYPES.SCE ? 'bundled' : '',
           warning:
             fallbackType === BACKEND_TYPES.UNKNOWN
               ? ''
@@ -704,10 +666,10 @@ export default {
       }
     },
     isParameterAvailable(name) {
-      return isParameterAvailable(name, this.backendType, this.target, this.backendCapabilities);
+      return isParameterAvailable(name, this.backendType, this.target);
     },
     sourceModifierAvailable(name) {
-      return modifierAvailable(name, this.target, this.backendCapabilities);
+      return modifierAvailable(name, this.target);
     },
     handleUrlsInput() {
       if (this.isShowSourceEditor) {
@@ -736,7 +698,7 @@ export default {
     },
     applySourceItems() {
       try {
-        this.urls = serializeSceSourceItems(this.sourceItems, this.target, this.backendCapabilities);
+        this.urls = serializeSceSourceItems(this.sourceItems, this.target);
         this.sceSourceModifiersApplied = this.sourceItems.some((item) =>
           ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
         );
@@ -787,7 +749,7 @@ export default {
       this.result = { subUrl: '', shortUrl: '' };
       if (this.isSce && this.isShowSourceEditor) {
         try {
-          this.urls = serializeSceSourceItems(this.sourceItems, this.target, this.backendCapabilities);
+          this.urls = serializeSceSourceItems(this.sourceItems, this.target);
           this.sceSourceModifiersApplied = this.sourceItems.some((item) =>
             ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
           );
@@ -806,7 +768,7 @@ export default {
       }
       if (this.isSce) {
         try {
-          validateSourceItems(parseSourceItems(this.urls), this.target, this.backendCapabilities);
+          validateSourceItems(parseSourceItems(this.urls), this.target);
         } catch (error) {
           this.setFormMessage(error.message, 'urls');
           return false;
@@ -836,7 +798,6 @@ export default {
           remoteConfig: this.remoteConfig,
           moreConfig: this.moreConfig,
           backendType: this.backendType,
-          capabilities: this.backendCapabilities,
         });
       } catch (error) {
         this.setFormMessage(error.message, 'urls');

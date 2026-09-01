@@ -64,19 +64,11 @@ export function normalizeRemoteConfigUrl(value) {
   return url.href;
 }
 
-export function countActiveOptions(moreConfig = {}, backendType = 'legacy', target = 'clash', capabilities) {
-  return countProfileOptions(moreConfig, backendType, target, capabilities);
+export function countActiveOptions(moreConfig = {}, backendType = 'legacy', target = 'clash') {
+  return countProfileOptions(moreConfig, backendType, target);
 }
 
-export function getSubLink({
-  urls,
-  api,
-  target,
-  remoteConfig = '',
-  moreConfig = {},
-  backendType = 'legacy',
-  capabilities,
-}) {
+export function getSubLink({ urls, api, target, remoteConfig = '', moreConfig = {}, backendType = 'legacy' }) {
   const normalizedApi = normalizeApiBaseUrl(api);
   const normalizedSources = urls
     .split(/\r?\n|\|/)
@@ -102,7 +94,7 @@ export function getSubLink({
     params.set('config', normalizedRemoteConfig);
   }
 
-  const effectiveConfig = filterMoreConfig(moreConfig, backendType, target, capabilities);
+  const effectiveConfig = filterMoreConfig(moreConfig, backendType, target);
   if (backendType === 'sce' && effectiveConfig.script === 'true' && effectiveConfig.expand === 'true') {
     throw new TypeError('Clash Script 与内联展开规则集不能同时开启');
   }

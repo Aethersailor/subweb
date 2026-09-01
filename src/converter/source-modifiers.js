@@ -56,14 +56,11 @@ export function parseSourceItems(value) {
   return splitSources(value).map(parseSourceItem);
 }
 
-export function modifierAvailable(key, target, capabilities) {
-  const remoteName = key === 'proxyDirect' ? 'proxy_direct' : key;
-  const remote = capabilities?.source_modifiers?.find((item) => item.name === remoteName);
-  const targets = remote?.targets || SOURCE_MODIFIER_TARGETS[key];
-  return targets?.includes(baseTarget(target)) === true;
+export function modifierAvailable(key, target) {
+  return SOURCE_MODIFIER_TARGETS[key]?.includes(baseTarget(target)) === true;
 }
 
-export function validateSourceItems(items, target, capabilities) {
+export function validateSourceItems(items, target) {
   if (!Array.isArray(items) || items.length === 0) {
     throw new TypeError('请先输入至少一条订阅链接或节点');
   }
@@ -73,7 +70,7 @@ export function validateSourceItems(items, target, capabilities) {
       throw new TypeError(`第 ${index + 1} 条来源缺少 URL 或节点`);
     }
     for (const key of ['tag', 'provider', 'interval', 'proxyDirect']) {
-      if (String(item[key] || '').trim() && !modifierAvailable(key, targetName, capabilities)) {
+      if (String(item[key] || '').trim() && !modifierAvailable(key, targetName)) {
         throw new TypeError(`第 ${index + 1} 条来源的${MODIFIER_LABELS[key]}不适用于当前目标客户端`);
       }
     }
@@ -104,7 +101,7 @@ export function serializeSourceItem(item) {
   return [...prefixes, item.url.trim()].join(',');
 }
 
-export function serializeSourceItems(items, target, capabilities) {
-  validateSourceItems(items, target, capabilities);
+export function serializeSourceItems(items, target) {
+  validateSourceItems(items, target);
   return items.map(serializeSourceItem).join('\n');
 }
