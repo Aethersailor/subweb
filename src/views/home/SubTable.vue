@@ -22,9 +22,71 @@
         :placeholder="placeholder"
         rows="4"
         spellcheck="false"
+        @input="handleUrlsInput"
       ></textarea>
-      <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
+      <div class="field-hint-row">
+        <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
+        <button v-if="isSce" type="button" class="text-button" @click="toggleSourceEditor">
+          {{ isShowSourceEditor ? '关闭来源参数' : '设置 SCE 来源参数' }}
+        </button>
+      </div>
     </div>
+
+    <section v-if="isSce && isShowSourceEditor" class="source-editor reveal-block" aria-label="SCE 来源参数">
+      <div class="options-heading">
+        <div>
+          <h3>SCE 来源参数</h3>
+          <span>按目标客户端限制可用字段；应用后会写回上方来源列表。</span>
+        </div>
+        <button type="button" class="text-button" @click="addSourceItem">添加来源</button>
+      </div>
+      <div class="source-items">
+        <article v-for="(item, index) in sourceItems" :key="index" class="source-item">
+          <div class="source-item-heading">
+            <strong>来源 {{ index + 1 }}</strong>
+            <button
+              v-if="sourceItems.length > 1"
+              type="button"
+              class="text-button is-danger"
+              @click="removeSourceItem(index)"
+            >
+              删除
+            </button>
+          </div>
+          <div class="field field-wide">
+            <label :for="`source-url-${index}`">订阅 URL 或节点</label>
+            <input :id="`source-url-${index}`" v-model.trim="item.url" spellcheck="false" />
+          </div>
+          <div class="source-parameter-grid">
+            <div v-if="sourceModifierAvailable('tag')" class="field">
+              <label :for="`source-tag-${index}`">来源标签</label>
+              <input :id="`source-tag-${index}`" v-model.trim="item.tag" placeholder="tag" />
+            </div>
+            <div v-if="sourceModifierAvailable('provider')" class="field">
+              <label :for="`source-provider-${index}`">远程资源名称</label>
+              <input :id="`source-provider-${index}`" v-model.trim="item.provider" placeholder="provider" />
+            </div>
+            <div v-if="sourceModifierAvailable('interval')" class="field">
+              <label :for="`source-interval-${index}`">单项更新间隔</label>
+              <input :id="`source-interval-${index}`" v-model.trim="item.interval" type="number" min="0" />
+            </div>
+            <div v-if="sourceModifierAvailable('proxyDirect')" class="field">
+              <label :for="`source-direct-${index}`">Provider 下载出口</label>
+              <div class="select-wrap compact-select">
+                <select :id="`source-direct-${index}`" v-model="item.proxyDirect">
+                  <option value="">跟随后端</option>
+                  <option value="true">直连</option>
+                  <option value="false">跟随代理设置</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="source-editor-actions">
+        <button type="button" class="primary-button compact-button" @click="applySourceItems">应用来源参数</button>
+      </div>
+    </section>
 
     <div class="field-grid">
       <div class="field">
@@ -53,6 +115,9 @@
         <span class="backend-status-dot" aria-hidden="true"></span>
         <span>{{ backendProbeText }}</span>
       </div>
+    </div>
+    <div v-if="backendProbe.warning" class="backend-warning" role="status">
+      {{ backendProbe.warning }}
     </div>
 
     <div v-if="isShowManualApiUrl" class="field field-wide reveal-block">
@@ -142,17 +207,27 @@
             <label for="interval">更新间隔</label>
             <input id="interval" v-model="moreConfig.interval" type="number" min="0" placeholder="秒" />
           </div>
-          <div class="field">
+          <div v-if="isParameterAvailable('dev_id')" class="field">
             <label for="dev-id">Quantumult X 设备 ID</label>
             <input id="dev-id" v-model="moreConfig.dev_id" placeholder="dev_id" />
+          </div>
+          <div v-if="isParameterAvailable('provider_headers')" class="field">
+            <label for="provider-headers">Provider 请求 Header 名称</label>
+            <input
+              id="provider-headers"
+              v-model="moreConfig.provider_headers"
+              placeholder="X-Subscription-Token,X-Age-Key"
+            />
+            <span class="field-hint">只填写名称；实际拉取转换链接的客户端必须携带同名 Header。</span>
           </div>
         </div>
       </div>
 
       <div class="options-section">
         <div class="options-heading">
-          <h3>自定义规则与分组</h3>
-          <span>自动编码为 URL-safe Base64；远程配置加载成功时后端会忽略此处内容</span>
+          <h3>节点重命名与自定义配置</h3>
+          <span v-if="!isSce">自定义分组和规则会编码为 URL-safe Base64</span>
+          <span v-else>SCE 使用远程配置提供自定义分组和规则</span>
         </div>
         <div class="advanced-inputs">
           <div class="field">
@@ -164,7 +239,7 @@
               placeholder="正则@替换，多个规则使用 ` 分隔"
             ></textarea>
           </div>
-          <div class="field">
+          <div v-if="!isSce" class="field">
             <label for="groups">自定义代理组</label>
             <textarea
               id="groups"
@@ -173,7 +248,11 @@
               placeholder="custom_proxy_group=...，多个项目使用 @ 分隔"
             ></textarea>
           </div>
-          <div class="field">
+          <div v-if="isSce" class="capability-notice">
+            SCE 固定使用 Mihomo 新字段；<code>groups</code> 和 <code>ruleset</code>
+            请求参数不会生效。请通过上方「远程配置」提供分组和规则。
+          </div>
+          <div v-if="!isSce" class="field">
             <label for="ruleset">自定义规则集</label>
             <textarea
               id="ruleset"
@@ -192,7 +271,7 @@
         </div>
         <div class="toggle-grid">
           <div
-            v-for="option in booleanParameters"
+            v-for="option in availableBooleanParameters"
             :key="option.key"
             class="toggle-field"
             :class="{ 'is-disabled': isEmojiDetailDisabled(option.key) }"
@@ -214,6 +293,10 @@
       </div>
     </section>
 
+    <div v-if="suppressedOptionCount" class="capability-notice compact-notice">
+      已暂存 {{ suppressedOptionCount }} 项当前后端或目标不支持的参数；生成链接时不会发送。
+    </div>
+
     <div class="section-divider">
       <span></span>
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -234,6 +317,26 @@
         转换并复制
       </button>
     </div>
+
+    <div v-if="isSce" class="diagnostic-actions">
+      <button class="secondary-button" type="button" :disabled="diagnostics.loading" @click="runDiagnostics">
+        <span v-if="diagnostics.loading" class="spinner" aria-hidden="true"></span>
+        {{ diagnostics.loading ? '正在诊断' : '让 SCE 诊断本次转换' }}
+      </button>
+      <span class="field-hint">诊断会立即把来源发送到当前 SCE 后端，但不会上传或生成短链接。</span>
+    </div>
+
+    <section v-if="diagnostics.payload || diagnostics.error" class="diagnostic-panel reveal-block" aria-live="polite">
+      <h3>SCE 诊断结果</h3>
+      <p v-if="diagnostics.error" class="diagnostic-error">{{ diagnostics.error }}</p>
+      <template v-else>
+        <p>{{ diagnosticSummary }}</p>
+        <details>
+          <summary>查看完整诊断 JSON</summary>
+          <pre>{{ formattedDiagnostics }}</pre>
+        </details>
+      </template>
+    </section>
 
     <div v-if="isShortUrlEnabled" class="result-group short-result">
       <div class="result-copy">
@@ -263,91 +366,35 @@ import {
 } from './index.js';
 import showNotification from '@/components/notification';
 import { getRuntimeConfig } from '@/config/runtime.js';
+import {
+  BACKEND_TYPES,
+  assertCapabilitiesMatchIdentity,
+  capabilitiesUrl,
+  normalizeBackendType,
+  parseBackendIdentity,
+  resolveBackendType,
+  validateSceCapabilities,
+} from '@/converter/backend.js';
+import {
+  DEFAULT_MORE_CONFIG,
+  availableBooleanParameters,
+  countSuppressedOptions,
+  getTargetOptions,
+  isParameterAvailable,
+} from '@/converter/profiles.js';
+import {
+  modifierAvailable,
+  parseSourceItems,
+  serializeSourceItems as serializeSceSourceItems,
+  validateSourceItems,
+} from '@/converter/source-modifiers.js';
 
 export default {
   name: 'SubTable',
-  setup() {
-    const DEFAULT_MORECONFIG = {
-      include: '',
-      exclude: '',
-      group: '',
-      filename: '',
-      interval: '',
-      dev_id: '',
-      rename: '',
-      groups: '',
-      ruleset: '',
-      emoji: '',
-      add_emoji: '',
-      remove_emoji: '',
-      append_type: '',
-      tfo: '',
-      udp: '',
-      list: '',
-      sort: '',
-      sort_script: '',
-      script: '',
-      insert: '',
-      scv: '',
-      fdn: '',
-      expand: '',
-      append_info: '',
-      prepend: '',
-      classic: '',
-      tls13: '',
-      provider_proxy_direct: '',
-      new_name: '',
-      strict: '',
-    };
-    const booleanParameters = [
-      { key: 'emoji', label: 'Emoji', hint: '同时控制添加 Emoji 和移除旧 Emoji' },
-      { key: 'add_emoji', label: '添加 Emoji', hint: '单独控制添加 Emoji' },
-      { key: 'remove_emoji', label: '移除旧 Emoji', hint: '单独控制移除已有 Emoji' },
-      { key: 'append_type', label: '追加节点类型', hint: '在节点名后追加协议类型' },
-      { key: 'tfo', label: 'TCP Fast Open', hint: '启用 TCP Fast Open' },
-      { key: 'udp', label: 'UDP', hint: '启用 UDP 转发' },
-      { key: 'list', label: 'Node List', hint: '生成节点列表；Extended 会强制使用 Provider 模式' },
-      { key: 'sort', label: '排序节点', hint: '按后端规则排序节点' },
-      { key: 'sort_script', label: '使用排序脚本', hint: '使用后端配置的排序脚本' },
-      { key: 'script', label: 'Clash Script', hint: '生成 Clash Script 配置' },
-      { key: 'insert', label: '插入预设节点', hint: '插入后端预先配置的节点' },
-      { key: 'scv', label: '跳过证书验证', hint: '为支持的节点跳过 TLS 证书验证' },
-      { key: 'fdn', label: '过滤废弃节点', hint: '过滤后端识别的废弃节点' },
-      { key: 'expand', label: '使用规则集', hint: '将规则集内联展开到生成配置' },
-      { key: 'append_info', label: '追加订阅信息', hint: '在响应中追加订阅流量信息' },
-      { key: 'prepend', label: '前置插入节点', hint: '将后端预设节点插入到最前面' },
-      { key: 'classic', label: 'Classical 规则', hint: '使用 Classical rule-provider 格式' },
-      { key: 'tls13', label: 'TLS 1.3', hint: '为支持的节点启用 TLS 1.3' },
-      { key: 'provider_proxy_direct', label: 'Provider 直连', hint: '规则 Provider 使用直连策略' },
-      { key: 'new_name', label: 'Mihomo 新字段', hint: '使用 proxies、proxy-groups 等新字段名' },
-      { key: 'strict', label: '严格更新', hint: '启用托管配置严格更新模式' },
-    ];
-    return {
-      booleanParameters,
-      DEFAULT_MORECONFIG,
-    };
-  },
   data() {
     const runtimeConfig = getRuntimeConfig();
     return {
       placeholder: 'https://example.com/subscription\nvmess://...\nss://...',
-      targetOptions: [
-        { value: 'clash', text: 'Clash' },
-        { value: 'clashr', text: 'ClashR' },
-        { value: 'v2ray', text: 'V2Ray' },
-        { value: 'quan', text: 'Quantumult' },
-        { value: 'quanx', text: 'Quantumult X' },
-        { value: 'surge&ver=2', text: 'Surge V2' },
-        { value: 'surge&ver=3', text: 'Surge V3' },
-        { value: 'surge&ver=4', text: 'Surge V4' },
-        { value: 'surfboard', text: 'Surfboard' },
-        { value: 'ss', text: 'SS (SIP002)' },
-        { value: 'sssub', text: 'SS Android' },
-        { value: 'ssd', text: 'SSD' },
-        { value: 'ssr', text: 'SSR' },
-        { value: 'loon', text: 'Loon' },
-        { value: 'singbox', text: 'Sing-box' },
-      ],
       runtimeConfig,
       backendOptions: [],
       backendSelection: 'manual',
@@ -355,10 +402,13 @@ export default {
       shortUrl: runtimeConfig.shortUrl,
       remoteConfigOptions: runtimeConfig.remoteConfigOptions,
       remoteSelection: runtimeConfig.remoteConfigOptions[0]?.value || '',
-      moreConfig: { ...this.DEFAULT_MORECONFIG },
+      moreConfig: { ...DEFAULT_MORE_CONFIG },
       isShowMoreConfig: false,
       isShowManualApiUrl: false,
       isShowRemoteConfig: false,
+      isShowSourceEditor: false,
+      sourceItems: [],
+      sceSourceModifiersApplied: false,
       result: {
         subUrl: '',
         shortUrl: '',
@@ -375,9 +425,23 @@ export default {
       backendProbe: {
         state: 'idle',
         version: '',
+        type: BACKEND_TYPES.UNKNOWN,
+        configuredType: BACKEND_TYPES.AUTO,
+        capabilities: null,
+        capabilitySource: '',
+        warning: '',
       },
       backendProbeController: null,
       backendProbeRequestId: 0,
+      lastTargetByBackend: {
+        legacy: 'clash',
+        sce: 'clash',
+      },
+      diagnostics: {
+        loading: false,
+        payload: null,
+        error: '',
+      },
     };
   },
   computed: {
@@ -385,7 +449,25 @@ export default {
       return this.runtimeConfig.enableShortUrl;
     },
     activeOptionCount() {
-      return countActiveOptions(this.moreConfig);
+      return countActiveOptions(this.moreConfig, this.backendType, this.target, this.backendCapabilities);
+    },
+    suppressedOptionCount() {
+      return countSuppressedOptions(this.moreConfig, this.backendType, this.target, this.backendCapabilities);
+    },
+    backendType() {
+      return this.backendProbe.type === BACKEND_TYPES.SCE ? BACKEND_TYPES.SCE : BACKEND_TYPES.LEGACY;
+    },
+    backendCapabilities() {
+      return this.backendProbe.capabilities;
+    },
+    isSce() {
+      return this.backendType === BACKEND_TYPES.SCE;
+    },
+    targetOptions() {
+      return getTargetOptions(this.backendType, this.backendCapabilities);
+    },
+    availableBooleanParameters() {
+      return availableBooleanParameters(this.backendType, this.target, this.backendCapabilities);
     },
     targetLabel() {
       return this.targetOptions.find((option) => option.value === this.target)?.text || this.target;
@@ -395,12 +477,36 @@ export default {
         return '正在探测后端';
       }
       if (this.backendProbe.state === 'online') {
-        return `在线 · ${this.backendProbe.version}`;
+        if (this.backendProbe.type === BACKEND_TYPES.SCE) {
+          const source = this.backendProbe.capabilitySource === 'remote' ? '动态能力' : '内置能力';
+          return `在线 · SCE · ${this.backendProbe.version} · ${source}`;
+        }
+        if (this.backendProbe.type === BACKEND_TYPES.LEGACY) {
+          return `在线 · 传统后端 · ${this.backendProbe.version}`;
+        }
+        return `在线 · 后端类型未确认 · ${this.backendProbe.version}`;
       }
       if (this.backendProbe.state === 'unreachable') {
+        if (this.backendProbe.type === BACKEND_TYPES.SCE) {
+          return '浏览器无法验证后端；按站点配置使用 SCE 内置能力';
+        }
+        if (this.backendProbe.type === BACKEND_TYPES.LEGACY) {
+          return '浏览器无法验证后端；按站点配置使用传统模式';
+        }
         return '浏览器无法确认可用性（可能是离线、超时或 CORS 限制）';
       }
       return '尚未检测后端';
+    },
+    diagnosticSummary() {
+      const payload = this.diagnostics.payload;
+      if (!payload) return '';
+      const mode = payload.mode || {};
+      const output = payload.output || {};
+      const nodes = payload.nodes || {};
+      return `目标 ${payload.target || '未知'}；处理方式 ${mode.remote_subscription_backend || 'server-side-parse'}；生成节点 ${nodes.generated ?? 0}；远程资源 ${output.remote_subscription_count ?? 0}。`;
+    },
+    formattedDiagnostics() {
+      return this.diagnostics.payload ? JSON.stringify(this.diagnostics.payload, null, 2) : '';
     },
   },
   created() {
@@ -420,6 +526,11 @@ export default {
         this.moreConfig.remove_emoji = '';
       }
     },
+    target(value) {
+      this.lastTargetByBackend[this.backendType] = value;
+      this.diagnostics = { loading: false, payload: null, error: '' };
+      this.clearFormMessage();
+    },
   },
   methods: {
     initBackendOptions() {
@@ -436,7 +547,7 @@ export default {
       this.isShowMoreConfig = !this.isShowMoreConfig;
     },
     resetMoreConfig() {
-      this.moreConfig = { ...this.DEFAULT_MORECONFIG };
+      this.moreConfig = { ...DEFAULT_MORE_CONFIG };
     },
     isEmojiDetailDisabled(key) {
       return (key === 'add_emoji' || key === 'remove_emoji') && this.moreConfig.emoji !== '';
@@ -450,10 +561,31 @@ export default {
     resetBackendProbe() {
       this.cancelBackendProbe();
       this.backendProbeRequestId += 1;
-      this.backendProbe = {
+      this.setBackendProbe({
         state: 'idle',
         version: '',
-      };
+        type: BACKEND_TYPES.UNKNOWN,
+        configuredType: BACKEND_TYPES.AUTO,
+        capabilities: null,
+        capabilitySource: '',
+        warning: '',
+      });
+    },
+    configuredBackendType(api) {
+      return normalizeBackendType(this.backendOptions.find((option) => option.url === api)?.type);
+    },
+    setBackendProbe(probe) {
+      this.lastTargetByBackend[this.backendType] = this.target;
+      this.backendProbe = probe;
+      this.clearFormMessage();
+      this.$nextTick(() => {
+        if (!this.targetOptions.some((option) => option.value === this.target)) {
+          const preferred = this.lastTargetByBackend[this.backendType];
+          this.target = this.targetOptions.some((option) => option.value === preferred)
+            ? preferred
+            : this.targetOptions[0]?.value || 'clash';
+        }
+      });
     },
     async probeBackend(api) {
       this.cancelBackendProbe();
@@ -468,11 +600,15 @@ export default {
       const controller = new AbortController();
       this.backendProbeRequestId = requestId;
       this.backendProbeController = controller;
+      const configuredType = this.configuredBackendType(normalizedApi);
       this.backendProbe = {
+        ...this.backendProbe,
         state: 'checking',
         version: '',
+        configuredType,
+        warning: '',
       };
-      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      const timeoutId = window.setTimeout(() => controller.abort(), 7000);
 
       try {
         const response = await fetch(`${normalizedApi}/version`, {
@@ -482,25 +618,64 @@ export default {
           throw new Error(`Backend returned HTTP ${response.status}`);
         }
 
-        const body = (await response.text()).trim().replace(/\s+/g, ' ').slice(0, 120);
+        const body = (await response.text()).trim().replace(/\s+/g, ' ').slice(0, 240);
         if (!body) {
           throw new Error('Backend returned an empty version response');
         }
         if (requestId !== this.backendProbeRequestId) {
           return;
         }
-        this.backendProbe = {
+        const identity = parseBackendIdentity(body);
+        const resolvedType = resolveBackendType(configuredType, identity.family, true);
+        let capabilities = null;
+        let capabilitySource = '';
+        let warning = '';
+        if (resolvedType === BACKEND_TYPES.UNKNOWN && configuredType !== BACKEND_TYPES.AUTO) {
+          warning = `站点把后端配置为 ${configuredType === BACKEND_TYPES.SCE ? 'SCE' : '传统模式'}，但 /version 返回了不同类型；已暂停专用能力。`;
+        } else if (resolvedType === BACKEND_TYPES.SCE) {
+          try {
+            const capabilityResponse = await fetch(capabilitiesUrl(normalizedApi), { signal: controller.signal });
+            if (!capabilityResponse.ok) {
+              throw new Error(`HTTP ${capabilityResponse.status}`);
+            }
+            capabilities = assertCapabilitiesMatchIdentity(
+              validateSceCapabilities(await capabilityResponse.json()),
+              identity,
+            );
+            capabilitySource = 'remote';
+          } catch (error) {
+            if (requestId !== this.backendProbeRequestId) return;
+            capabilitySource = 'bundled';
+            warning = `SCE 能力接口不可用，已使用当前前端内置能力（${error.name === 'AbortError' ? '请求超时' : '无法读取 /capabilities'}）。`;
+          }
+        }
+        if (requestId !== this.backendProbeRequestId) return;
+        this.setBackendProbe({
           state: 'online',
           version: body,
-        };
+          type: resolvedType,
+          configuredType,
+          capabilities,
+          capabilitySource,
+          warning,
+        });
       } catch {
         if (requestId !== this.backendProbeRequestId) {
           return;
         }
-        this.backendProbe = {
+        const fallbackType = configuredType === BACKEND_TYPES.AUTO ? BACKEND_TYPES.UNKNOWN : configuredType;
+        this.setBackendProbe({
           state: 'unreachable',
           version: '',
-        };
+          type: fallbackType,
+          configuredType,
+          capabilities: null,
+          capabilitySource: fallbackType === BACKEND_TYPES.SCE ? 'bundled' : '',
+          warning:
+            fallbackType === BACKEND_TYPES.UNKNOWN
+              ? ''
+              : `未能验证后端身份，暂按站点配置使用${fallbackType === BACKEND_TYPES.SCE ? ' SCE 内置能力' : '传统模式'}。`,
+        });
       } finally {
         window.clearTimeout(timeoutId);
         if (this.backendProbeController === controller) {
@@ -526,6 +701,49 @@ export default {
       } else {
         this.isShowRemoteConfig = false;
         this.remoteConfig = event.target.value;
+      }
+    },
+    isParameterAvailable(name) {
+      return isParameterAvailable(name, this.backendType, this.target, this.backendCapabilities);
+    },
+    sourceModifierAvailable(name) {
+      return modifierAvailable(name, this.target, this.backendCapabilities);
+    },
+    handleUrlsInput() {
+      if (this.isShowSourceEditor) {
+        this.isShowSourceEditor = false;
+        this.sourceItems = [];
+      }
+      this.sceSourceModifiersApplied = false;
+      this.diagnostics = { loading: false, payload: null, error: '' };
+    },
+    toggleSourceEditor() {
+      if (this.isShowSourceEditor) {
+        this.isShowSourceEditor = false;
+        return;
+      }
+      this.sourceItems = parseSourceItems(this.urls);
+      if (this.sourceItems.length === 0) {
+        this.sourceItems = [{ url: '', tag: '', provider: '', interval: '', proxyDirect: '' }];
+      }
+      this.isShowSourceEditor = true;
+    },
+    addSourceItem() {
+      this.sourceItems.push({ url: '', tag: '', provider: '', interval: '', proxyDirect: '' });
+    },
+    removeSourceItem(index) {
+      this.sourceItems.splice(index, 1);
+    },
+    applySourceItems() {
+      try {
+        this.urls = serializeSceSourceItems(this.sourceItems, this.target, this.backendCapabilities);
+        this.sceSourceModifiersApplied = this.sourceItems.some((item) =>
+          ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
+        );
+        this.isShowSourceEditor = false;
+        this.clearFormMessage();
+      } catch (error) {
+        this.setFormMessage(error.message, 'urls');
       }
     },
     async toCopy(url, title) {
@@ -567,9 +785,32 @@ export default {
     getConverter() {
       this.clearFormMessage();
       this.result = { subUrl: '', shortUrl: '' };
+      if (this.isSce && this.isShowSourceEditor) {
+        try {
+          this.urls = serializeSceSourceItems(this.sourceItems, this.target, this.backendCapabilities);
+          this.sceSourceModifiersApplied = this.sourceItems.some((item) =>
+            ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
+          );
+        } catch (error) {
+          this.setFormMessage(error.message, 'urls');
+          return false;
+        }
+      }
       if (!this.urls.trim()) {
         this.setFormMessage('请输入订阅链接或节点。', 'urls');
         return false;
+      }
+      if (!this.isSce && this.sceSourceModifiersApplied) {
+        this.setFormMessage('来源包含由 SCE 编辑器生成的专用参数。请切回 SCE，或手工清除这些前缀。', 'urls');
+        return false;
+      }
+      if (this.isSce) {
+        try {
+          validateSourceItems(parseSourceItems(this.urls), this.target, this.backendCapabilities);
+        } catch (error) {
+          this.setFormMessage(error.message, 'urls');
+          return false;
+        }
       }
       try {
         this.api = normalizeApiBaseUrl(this.api);
@@ -594,6 +835,8 @@ export default {
           target: this.target,
           remoteConfig: this.remoteConfig,
           moreConfig: this.moreConfig,
+          backendType: this.backendType,
+          capabilities: this.backendCapabilities,
         });
       } catch (error) {
         this.setFormMessage(error.message, 'urls');
@@ -606,7 +849,40 @@ export default {
         this.toCopy(this.result.subUrl, '订阅链接');
       }
     },
+    async runDiagnostics() {
+      if (!window.confirm('诊断会立即把当前来源发送到所选 SCE 后端。确认继续吗？')) {
+        return;
+      }
+      if (!this.getConverter()) return;
+      const diagnosticUrl = new URL(this.result.subUrl);
+      diagnosticUrl.searchParams.set('explain', 'true');
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+      this.diagnostics = { loading: true, payload: null, error: '' };
+      try {
+        const response = await fetch(diagnosticUrl, { signal: controller.signal });
+        const text = await response.text();
+        let payload;
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          throw new Error(`后端返回了非 JSON 诊断结果（HTTP ${response.status}）`);
+        }
+        this.diagnostics = { loading: false, payload, error: '' };
+      } catch (error) {
+        this.diagnostics = {
+          loading: false,
+          payload: null,
+          error: error.name === 'AbortError' ? '诊断请求超时。' : `诊断失败：${error.message}`,
+        };
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    },
     async getShortUrl() {
+      if (!window.confirm('短链接服务会收到可能包含订阅凭据的完整转换链接。确认继续吗？')) {
+        return;
+      }
       if (!this.getConverter()) {
         return;
       }
@@ -718,6 +994,13 @@ export default {
   line-height: 1.45;
 }
 
+.field-hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .form-message {
   padding: 12px 14px;
   color: var(--danger);
@@ -776,6 +1059,26 @@ export default {
 
 .backend-status.is-unreachable {
   color: var(--warning);
+}
+
+.backend-warning,
+.capability-notice {
+  padding: 11px 13px;
+  color: var(--warning);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--warning) 9%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  border-radius: 13px;
+}
+
+.capability-notice code {
+  color: inherit;
+  font-weight: 700;
+}
+
+.compact-notice {
+  margin-top: -8px;
 }
 
 input,
@@ -895,6 +1198,12 @@ select {
   background: var(--control-hover);
 }
 
+.secondary-button:disabled,
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .primary-button svg,
 .secondary-button svg {
   width: 18px;
@@ -964,6 +1273,101 @@ select {
   cursor: pointer;
   background: transparent;
   border: 0;
+}
+
+.text-button.is-danger {
+  color: var(--danger);
+}
+
+.source-editor,
+.diagnostic-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid var(--inner-border);
+  border-radius: 22px;
+}
+
+.source-items {
+  display: grid;
+  gap: 14px;
+}
+
+.source-item {
+  display: grid;
+  gap: 13px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--control-bg) 78%, transparent);
+  border: 1px solid var(--control-border);
+  border-radius: 16px;
+}
+
+.source-item-heading,
+.source-editor-actions,
+.diagnostic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.source-item-heading strong {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.source-parameter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.compact-button {
+  min-height: 42px;
+  padding: 9px 16px;
+  font-size: 0.8rem;
+}
+
+.diagnostic-actions {
+  justify-content: flex-start;
+}
+
+.diagnostic-panel h3,
+.diagnostic-panel p {
+  margin: 0;
+}
+
+.diagnostic-panel p {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.diagnostic-panel .diagnostic-error {
+  color: var(--danger);
+}
+
+.diagnostic-panel summary {
+  color: var(--accent-blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.diagnostic-panel pre {
+  max-height: 420px;
+  margin: 12px 0 0;
+  padding: 13px;
+  overflow: auto;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
 }
 
 .advanced-inputs {
@@ -1110,8 +1514,15 @@ select {
   .field-grid,
   .options-inputs,
   .remote-row,
-  .result-group {
+  .result-group,
+  .source-parameter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .field-hint-row,
+  .diagnostic-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .backend-status {

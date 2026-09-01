@@ -51,7 +51,7 @@ test('容器入口安装默认配置，并按环境变量幂等地重新生成',
     });
     assert.equal(second.status, 0, second.stderr);
     assert.deepEqual(readGeneratedConfig(configDir).apiBackends, [
-      { name: '自定义后端', url: 'https://api.example.com/base' },
+      { name: '自定义后端', url: 'https://api.example.com/base', type: 'auto' },
     ]);
     assert.equal(readGeneratedConfig(configDir).siteName, '我的 "站点" \\ test');
     assert.equal(readGeneratedConfig(configDir).menuItem.length, 2);
