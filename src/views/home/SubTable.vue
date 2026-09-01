@@ -12,7 +12,7 @@
       {{ formMessage.text }}
     </div>
 
-    <div class="field field-wide">
+    <div v-if="!isSubConverterExtended" class="field field-wide">
       <label for="subscription-urls">订阅链接或节点</label>
       <textarea
         id="subscription-urls"
@@ -27,61 +27,35 @@
       <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
     </div>
 
-    <section
-      v-if="isSubConverterExtended"
-      class="subconverter-extended-source-overview"
-      aria-label="SubConverter-Extended 专属订阅来源参数"
-    >
-      <div class="subconverter-extended-source-overview-heading">
+    <section v-if="isSubConverterExtended" class="source-editor" aria-label="SubConverter-Extended 订阅来源">
+      <div class="options-heading source-editor-heading">
         <div>
-          <span class="subconverter-extended-only-badge">SubConverter-Extended 专属</span>
-          <h3>订阅链接前缀参数</h3>
+          <h3>SubConverter-Extended 订阅来源</h3>
+          <span>填写字段即可；SubWeb 会按固定顺序组合并只发送当前目标支持的参数。</span>
         </div>
-        <button type="button" class="secondary-button compact-button" @click="toggleSourceEditor">
-          {{ isShowSourceEditor ? '收起逐条配置' : '逐条配置来源参数' }}
-        </button>
-      </div>
-      <p>SubWeb 会把下列参数放在每条订阅链接之前，并按当前目标客户端检查是否可用。</p>
-      <div class="subconverter-extended-source-capabilities">
-        <div class="subconverter-extended-source-capability">
-          <code>tag:</code>
-          <span>标记订阅来源，供远程资源和分组匹配使用</span>
-          <small>Clash / ClashR、Surge、QuanX、Loon、Surfboard、Stash</small>
-        </div>
-        <div class="subconverter-extended-source-capability">
-          <code>provider:</code>
-          <span>指定生成的 Provider 或远程资源名称</span>
-          <small>Clash / ClashR、Surge、QuanX、Loon、Surfboard、Stash</small>
-        </div>
-        <div class="subconverter-extended-source-capability">
-          <code>interval:</code>
-          <span>为单条远程订阅指定更新间隔</span>
-          <small>Clash / ClashR、Surge、QuanX、Stash</small>
-        </div>
-        <div class="subconverter-extended-source-capability">
-          <code>proxy_direct:</code>
-          <span>控制 Provider 下载时直连或跟随代理设置</span>
-          <small>仅 Clash / ClashR</small>
+        <div class="source-heading-actions">
+          <button type="button" class="text-button" @click="toggleSourceImport">
+            {{ isShowSourceImport ? '关闭批量导入' : '批量导入' }}
+          </button>
+          <button type="button" class="secondary-button compact-button" @click="addSourceItem">添加来源</button>
         </div>
       </div>
-      <div class="subconverter-extended-syntax-example">
-        <span>示例</span>
-        <code>provider:机场 A,interval:3600,proxy_direct:true,https://example.com/sub</code>
-      </div>
-    </section>
 
-    <section
-      v-if="isSubConverterExtended && isShowSourceEditor"
-      class="source-editor reveal-block"
-      aria-label="SubConverter-Extended 来源参数"
-    >
-      <div class="options-heading">
-        <div>
-          <h3>SubConverter-Extended 来源参数</h3>
-          <span>按目标客户端限制可用字段；应用后会写回上方来源列表。</span>
+      <div v-if="isShowSourceImport" class="source-import reveal-block">
+        <div class="field field-wide">
+          <label for="source-import">批量粘贴订阅链接或节点</label>
+          <textarea
+            id="source-import"
+            v-model="sourceImportText"
+            rows="3"
+            spellcheck="false"
+            placeholder="每行一条，也支持粘贴已有的 SubConverter-Extended 前缀格式"
+          ></textarea>
+          <span class="field-hint">导入会解析已有前缀；如果当前只有空白来源，则替换该空白项。</span>
         </div>
-        <button type="button" class="text-button" @click="addSourceItem">添加来源</button>
+        <button type="button" class="primary-button compact-button" @click="importSourceItems">导入来源</button>
       </div>
+
       <div class="source-items">
         <article v-for="(item, index) in sourceItems" :key="index" class="source-item">
           <div class="source-item-heading">
@@ -97,23 +71,36 @@
           </div>
           <div class="field field-wide">
             <label :for="`source-url-${index}`">订阅 URL 或节点</label>
-            <input :id="`source-url-${index}`" v-model.trim="item.url" spellcheck="false" />
+            <input
+              :id="`source-url-${index}`"
+              v-model.trim="item.url"
+              :aria-invalid="formMessage.field === 'urls'"
+              spellcheck="false"
+              placeholder="https://example.com/sub 或 ss://..."
+            />
           </div>
           <div class="source-parameter-grid">
-            <div v-if="sourceModifierAvailable('tag')" class="field">
-              <label :for="`source-tag-${index}`">来源标签</label>
-              <input :id="`source-tag-${index}`" v-model.trim="item.tag" placeholder="tag" />
+            <div v-if="sourceModifierAvailable('tag', item)" class="field">
+              <label :for="`source-tag-${index}`">来源标签（tag）</label>
+              <input :id="`source-tag-${index}`" v-model.trim="item.tag" placeholder="例如：香港入口" />
             </div>
-            <div v-if="sourceModifierAvailable('provider')" class="field">
-              <label :for="`source-provider-${index}`">远程资源名称</label>
-              <input :id="`source-provider-${index}`" v-model.trim="item.provider" placeholder="provider" />
+            <div v-if="sourceModifierAvailable('provider', item)" class="field">
+              <label :for="`source-provider-${index}`">远程资源名称（provider）</label>
+              <input :id="`source-provider-${index}`" v-model.trim="item.provider" placeholder="例如：机场 A" />
             </div>
-            <div v-if="sourceModifierAvailable('interval')" class="field">
-              <label :for="`source-interval-${index}`">单项更新间隔</label>
-              <input :id="`source-interval-${index}`" v-model.trim="item.interval" type="number" min="0" />
+            <div v-if="sourceModifierAvailable('interval', item)" class="field">
+              <label :for="`source-interval-${index}`">更新间隔（interval，秒）</label>
+              <input
+                :id="`source-interval-${index}`"
+                v-model.trim="item.interval"
+                type="number"
+                :min="sourceIntervalMinimum"
+                max="2147483647"
+                placeholder="例如：3600"
+              />
             </div>
-            <div v-if="sourceModifierAvailable('proxyDirect')" class="field">
-              <label :for="`source-direct-${index}`">Provider 下载出口</label>
+            <div v-if="sourceModifierAvailable('proxyDirect', item)" class="field">
+              <label :for="`source-direct-${index}`">Provider 下载出口（proxy_direct）</label>
               <div class="select-wrap compact-select">
                 <select :id="`source-direct-${index}`" v-model="item.proxyDirect">
                   <option value="">跟随后端</option>
@@ -124,13 +111,13 @@
             </div>
           </div>
           <div class="source-syntax-preview">
-            <span>最终前缀语法</span>
+            <span>SubWeb 将发送</span>
             <code>{{ sourceItemPreview(item) }}</code>
           </div>
         </article>
       </div>
-      <div class="source-editor-actions">
-        <button type="button" class="primary-button compact-button" @click="applySourceItems">应用来源参数</button>
+      <div v-if="suppressedSourceModifierCount" class="capability-notice compact-notice">
+        已暂存 {{ suppressedSourceModifierCount }} 项当前目标不支持的来源参数；生成请求时会自动省略。
       </div>
     </section>
 
@@ -421,11 +408,14 @@ import {
   isParameterAvailable,
 } from '@/converter/profiles.js';
 import {
+  countSuppressedSourceModifiers,
+  createSourceItem,
+  minimumSourceInterval,
   modifierAvailable,
   parseSourceItems,
+  serializePlainSourceItems,
   serializeSourceItem,
-  serializeSourceItems as serializeSceSourceItems,
-  validateSourceItems,
+  serializeSourceItems as serializeExtendedSourceItems,
 } from '@/converter/source-modifiers.js';
 
 export default {
@@ -445,9 +435,9 @@ export default {
       isShowMoreConfig: false,
       isShowManualApiUrl: false,
       isShowRemoteConfig: false,
-      isShowSourceEditor: false,
-      sourceItems: [],
-      extendedSourceModifiersApplied: false,
+      isShowSourceImport: false,
+      sourceImportText: '',
+      sourceItems: [createSourceItem()],
       result: {
         subUrl: '',
         shortUrl: '',
@@ -490,6 +480,12 @@ export default {
     },
     suppressedOptionCount() {
       return countSuppressedOptions(this.moreConfig, this.backendType, this.target);
+    },
+    suppressedSourceModifierCount() {
+      return this.isSubConverterExtended ? countSuppressedSourceModifiers(this.sourceItems, this.target) : 0;
+    },
+    sourceIntervalMinimum() {
+      return minimumSourceInterval(this.target);
     },
     backendType() {
       return this.backendProbe.type === BACKEND_TYPES.SUBCONVERTER_EXTENDED
@@ -566,6 +562,14 @@ export default {
       this.clearGeneratedResults();
       this.clearFormMessage();
     },
+    sourceItems: {
+      deep: true,
+      handler() {
+        if (this.isSubConverterExtended) {
+          this.clearGeneratedResults();
+        }
+      },
+    },
   },
   methods: {
     initBackendOptions() {
@@ -608,6 +612,13 @@ export default {
       return normalizeBackendType(this.backendOptions.find((option) => option.url === api)?.type);
     },
     setBackendProbe(probe) {
+      const wasSubConverterExtended = this.isSubConverterExtended;
+      const willUseSubConverterExtended = probe.type === BACKEND_TYPES.SUBCONVERTER_EXTENDED;
+      if (wasSubConverterExtended && !willUseSubConverterExtended) {
+        this.urls = serializePlainSourceItems(this.sourceItems);
+      } else if (!wasSubConverterExtended && willUseSubConverterExtended) {
+        this.syncSourceItemsFromUrls(true);
+      }
       this.lastTargetByBackend[this.backendType] = this.target;
       this.backendProbe = probe;
       this.clearGeneratedResults();
@@ -723,48 +734,55 @@ export default {
     isParameterAvailable(name) {
       return isParameterAvailable(name, this.backendType, this.target);
     },
-    sourceModifierAvailable(name) {
-      return modifierAvailable(name, this.target);
+    sourceModifierAvailable(name, item) {
+      return modifierAvailable(name, this.target, item?.url);
     },
     sourceItemPreview(item) {
-      return serializeSourceItem(item) || '填写来源后显示最终语法';
+      return serializeSourceItem(item, this.target) || '填写来源后显示最终组合形式';
     },
     handleUrlsInput() {
-      if (this.isShowSourceEditor) {
-        this.isShowSourceEditor = false;
-        this.sourceItems = [];
-      }
-      this.extendedSourceModifiersApplied = false;
-      this.diagnostics = { loading: false, payload: null, error: '' };
+      this.clearGeneratedResults();
     },
-    toggleSourceEditor() {
-      if (this.isShowSourceEditor) {
-        this.isShowSourceEditor = false;
+    syncSourceItemsFromUrls(force = false) {
+      const imported = parseSourceItems(this.urls);
+      const onlyBlank =
+        this.sourceItems.length === 1 &&
+        !['url', 'tag', 'provider', 'interval', 'proxyDirect'].some((key) =>
+          String(this.sourceItems[0]?.[key] || '').trim(),
+        );
+      if (imported.length && (force || onlyBlank || this.sourceItems.length === 0)) {
+        this.sourceItems = imported;
+      } else if (this.sourceItems.length === 0) {
+        this.sourceItems = [createSourceItem()];
+      }
+    },
+    toggleSourceImport() {
+      this.isShowSourceImport = !this.isShowSourceImport;
+      if (!this.isShowSourceImport) {
+        this.sourceImportText = '';
+      }
+    },
+    importSourceItems() {
+      const imported = parseSourceItems(this.sourceImportText);
+      if (!imported.length) {
+        this.setFormMessage('请先粘贴至少一条订阅链接或节点。', 'urls');
         return;
       }
-      this.sourceItems = parseSourceItems(this.urls);
-      if (this.sourceItems.length === 0) {
-        this.sourceItems = [{ url: '', tag: '', provider: '', interval: '', proxyDirect: '' }];
-      }
-      this.isShowSourceEditor = true;
+      const onlyBlank =
+        this.sourceItems.length === 1 &&
+        !['url', 'tag', 'provider', 'interval', 'proxyDirect'].some((key) =>
+          String(this.sourceItems[0]?.[key] || '').trim(),
+        );
+      this.sourceItems = onlyBlank ? imported : [...this.sourceItems, ...imported];
+      this.sourceImportText = '';
+      this.isShowSourceImport = false;
+      this.clearFormMessage();
     },
     addSourceItem() {
-      this.sourceItems.push({ url: '', tag: '', provider: '', interval: '', proxyDirect: '' });
+      this.sourceItems.push(createSourceItem());
     },
     removeSourceItem(index) {
       this.sourceItems.splice(index, 1);
-    },
-    applySourceItems() {
-      try {
-        this.urls = serializeSceSourceItems(this.sourceItems, this.target);
-        this.extendedSourceModifiersApplied = this.sourceItems.some((item) =>
-          ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
-        );
-        this.isShowSourceEditor = false;
-        this.clearFormMessage();
-      } catch (error) {
-        this.setFormMessage(error.message, 'urls');
-      }
     },
     async toCopy(url, title) {
       if (!url) {
@@ -809,35 +827,18 @@ export default {
     getConverter() {
       this.clearFormMessage();
       this.result = { subUrl: '', shortUrl: '' };
-      if (this.isSubConverterExtended && this.isShowSourceEditor) {
-        try {
-          this.urls = serializeSceSourceItems(this.sourceItems, this.target);
-          this.extendedSourceModifiersApplied = this.sourceItems.some((item) =>
-            ['tag', 'provider', 'interval', 'proxyDirect'].some((key) => String(item[key] || '').trim()),
-          );
-        } catch (error) {
-          this.setFormMessage(error.message, 'urls');
-          return false;
-        }
-      }
-      if (!this.urls.trim()) {
-        this.setFormMessage('请输入订阅链接或节点。', 'urls');
-        return false;
-      }
-      if (!this.isSubConverterExtended && this.extendedSourceModifiersApplied) {
-        this.setFormMessage(
-          '来源包含由 SubConverter-Extended 编辑器生成的专用参数。请切回 SubConverter-Extended，或手工清除这些前缀。',
-          'urls',
-        );
-        return false;
-      }
+      let effectiveUrls = this.urls;
       if (this.isSubConverterExtended) {
         try {
-          validateSourceItems(parseSourceItems(this.urls), this.target);
+          effectiveUrls = serializeExtendedSourceItems(this.sourceItems, this.target);
         } catch (error) {
           this.setFormMessage(error.message, 'urls');
           return false;
         }
+      }
+      if (!effectiveUrls.trim()) {
+        this.setFormMessage('请输入订阅链接或节点。', 'urls');
+        return false;
       }
       try {
         this.api = normalizeApiBaseUrl(this.api);
@@ -857,7 +858,7 @@ export default {
       }
       try {
         this.result.subUrl = getSubLink({
-          urls: this.urls,
+          urls: effectiveUrls,
           api: this.api,
           target: this.target,
           remoteConfig: this.remoteConfig,
@@ -1298,73 +1299,6 @@ select {
   color: var(--danger);
 }
 
-.subconverter-extended-source-overview {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-  background: color-mix(in srgb, var(--accent-blue) 6%, var(--surface-soft));
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 22%, var(--inner-border));
-  border-radius: 22px;
-}
-
-.subconverter-extended-source-overview-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.subconverter-extended-source-overview-heading > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.subconverter-extended-source-overview h3,
-.subconverter-extended-source-overview p {
-  margin: 0;
-}
-
-.subconverter-extended-source-overview h3 {
-  color: var(--text-primary);
-  font-size: 0.96rem;
-}
-
-.subconverter-extended-source-overview p {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.55;
-}
-
-.subconverter-extended-only-badge {
-  padding: 5px 8px;
-  color: var(--accent-blue);
-  font-size: 0.7rem;
-  font-weight: 800;
-  line-height: 1;
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 25%, transparent);
-  border-radius: 999px;
-}
-
-.subconverter-extended-source-capabilities {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.subconverter-extended-source-capability {
-  display: grid;
-  min-width: 0;
-  gap: 5px;
-  padding: 12px;
-  background: var(--control-bg);
-  border: 1px solid var(--control-border);
-  border-radius: 14px;
-}
-
-.subconverter-extended-source-capability code,
-.subconverter-extended-syntax-example code,
 .source-syntax-preview code {
   color: var(--accent-blue);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -1372,19 +1306,6 @@ select {
   font-weight: 800;
 }
 
-.subconverter-extended-source-capability span {
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.subconverter-extended-source-capability small {
-  color: var(--text-muted);
-  font-size: 0.68rem;
-  line-height: 1.4;
-}
-
-.subconverter-extended-syntax-example,
 .source-syntax-preview {
   display: grid;
   gap: 6px;
@@ -1394,14 +1315,12 @@ select {
   border-radius: 12px;
 }
 
-.subconverter-extended-syntax-example span,
 .source-syntax-preview span {
   color: var(--text-muted);
   font-size: 0.68rem;
   font-weight: 700;
 }
 
-.subconverter-extended-syntax-example code,
 .source-syntax-preview code {
   overflow-wrap: anywhere;
   white-space: normal;
@@ -1415,6 +1334,36 @@ select {
   background: var(--surface-soft);
   border: 1px solid var(--inner-border);
   border-radius: 22px;
+}
+
+.source-editor {
+  background: color-mix(in srgb, var(--accent-blue) 5%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--accent-blue) 22%, var(--inner-border));
+}
+
+.source-editor-heading {
+  align-items: center;
+}
+
+.source-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.source-import {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 16px;
+}
+
+.source-import textarea {
+  min-height: 96px;
 }
 
 .source-items {
@@ -1432,7 +1381,6 @@ select {
 }
 
 .source-item-heading,
-.source-editor-actions,
 .diagnostic-actions {
   display: flex;
   align-items: center;
@@ -1647,17 +1595,24 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .subconverter-extended-source-overview-heading,
+  .source-editor-heading,
   .diagnostic-actions {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .subconverter-extended-source-overview-heading .secondary-button {
+  .source-heading-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .source-heading-actions .secondary-button,
+  .source-import .primary-button {
     width: 100%;
   }
 
-  .subconverter-extended-source-capabilities {
+  .source-import {
     grid-template-columns: 1fr;
   }
 

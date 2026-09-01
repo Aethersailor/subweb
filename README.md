@@ -27,6 +27,7 @@ SubWeb 是一个轻量的 **Vue 3** [subconverter](https://github.com/tindy2013/
 - 🎨 **现代化界面** — 原生 Vue 3 响应式界面，支持键盘操作与深色模式
 - ☁️ **Cloudflare Pages 优先** — 静态前端和运行时配置在边缘部署，转换请求直达所选后端
 - 🔍 **后端能力识别** — 自动区分 SubConverter-Extended 与传统后端，并显示对应目标和参数
+- 🧩 **结构化来源参数** — 为每条 SubConverter-Extended 来源填写标签、Provider 名称、更新间隔和下载出口，由前端规范组合
 - 🔗 **可配置的短链接** — 默认关闭；部署者可按需配置自己的短链接服务
 - 🐳 **Docker 一键部署** — 支持 x86 与 ARM 架构，快速上线
 - ⚙️ **高度可配置** — 支持自定义后端 API、远程配置、站点名称等

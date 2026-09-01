@@ -21,6 +21,19 @@ const MODIFIER_LABELS = Object.freeze({
   proxyDirect: 'Provider 下载出口',
 });
 
+const MODIFIER_KEYS = Object.freeze(['tag', 'provider', 'interval', 'proxyDirect']);
+const REMOTE_ONLY_MODIFIERS = new Set(['provider', 'interval', 'proxyDirect']);
+
+export function createSourceItem(value = {}) {
+  return {
+    url: String(value.url || ''),
+    tag: String(value.tag || ''),
+    provider: String(value.provider || ''),
+    interval: String(value.interval || ''),
+    proxyDirect: String(value.proxyDirect || ''),
+  };
+}
+
 export function splitSources(value) {
   return String(value || '')
     .split(/\r?\n|\|/)
@@ -29,7 +42,7 @@ export function splitSources(value) {
 }
 
 export function parseSourceItem(value) {
-  const item = { url: String(value || '').trim(), tag: '', provider: '', interval: '', proxyDirect: '' };
+  const item = createSourceItem({ url: String(value || '').trim() });
   let remainder = item.url;
   let parsedPrefix = false;
   while (remainder) {
@@ -56,8 +69,35 @@ export function parseSourceItems(value) {
   return splitSources(value).map(parseSourceItem);
 }
 
-export function modifierAvailable(key, target) {
-  return SOURCE_MODIFIER_TARGETS[key]?.includes(baseTarget(target)) === true;
+export function isRemoteSubscriptionSource(value) {
+  const source = String(value || '').trim();
+  return !source || /^https?:\/\//i.test(source);
+}
+
+export function modifierAvailable(key, target, source = '') {
+  const targetSupportsModifier = SOURCE_MODIFIER_TARGETS[key]?.includes(baseTarget(target)) === true;
+  return targetSupportsModifier && (!REMOTE_ONLY_MODIFIERS.has(key) || isRemoteSubscriptionSource(source));
+}
+
+export function minimumSourceInterval(target) {
+  return ['surge', 'stash'].includes(baseTarget(target)) ? 1 : 0;
+}
+
+export function countSuppressedSourceModifiers(items, target) {
+  return (items || []).reduce(
+    (count, item) =>
+      count +
+      MODIFIER_KEYS.filter((key) => String(item?.[key] || '').trim() && !modifierAvailable(key, target, item?.url))
+        .length,
+    0,
+  );
+}
+
+function validatePrefixText(value, label, index) {
+  const normalized = String(value || '').trim();
+  if (normalized.includes(',') || normalized.includes('|') || /[\r\n\0\x7f]/.test(normalized)) {
+    throw new TypeError(`第 ${index + 1} 条来源的${label}不能包含逗号、竖线或控制字符`);
+  }
 }
 
 export function validateSourceItems(items, target) {
@@ -69,12 +109,13 @@ export function validateSourceItems(items, target) {
     if (!item.url?.trim()) {
       throw new TypeError(`第 ${index + 1} 条来源缺少 URL 或节点`);
     }
-    for (const key of ['tag', 'provider', 'interval', 'proxyDirect']) {
-      if (String(item[key] || '').trim() && !modifierAvailable(key, targetName)) {
-        throw new TypeError(`第 ${index + 1} 条来源的${MODIFIER_LABELS[key]}不适用于当前目标客户端`);
-      }
+    if (modifierAvailable('tag', targetName, item.url)) {
+      validatePrefixText(item.tag, MODIFIER_LABELS.tag, index);
     }
-    if (String(item.interval || '').trim()) {
+    if (modifierAvailable('provider', targetName, item.url)) {
+      validatePrefixText(item.provider, MODIFIER_LABELS.provider, index);
+    }
+    if (modifierAvailable('interval', targetName, item.url) && String(item.interval || '').trim()) {
       if (!/^\d+$/.test(String(item.interval))) {
         throw new TypeError(`第 ${index + 1} 条来源的更新间隔必须是非负整数`);
       }
@@ -82,26 +123,43 @@ export function validateSourceItems(items, target) {
       if (!Number.isSafeInteger(interval) || interval > 2147483647) {
         throw new TypeError(`第 ${index + 1} 条来源的更新间隔超出允许范围`);
       }
-      if ((targetName === 'surge' || targetName === 'stash') && interval === 0) {
+      if (interval < minimumSourceInterval(targetName)) {
         throw new TypeError(`第 ${index + 1} 条来源的更新间隔必须大于 0`);
       }
     }
-    if (String(item.proxyDirect || '').trim() && !['true', 'false'].includes(String(item.proxyDirect))) {
+    if (
+      modifierAvailable('proxyDirect', targetName, item.url) &&
+      String(item.proxyDirect || '').trim() &&
+      !['true', 'false'].includes(String(item.proxyDirect))
+    ) {
       throw new TypeError(`第 ${index + 1} 条来源的 Provider 出口值无效`);
     }
   }
 }
 
-export function serializeSourceItem(item) {
+export function serializeSourceItem(item, target) {
   const prefixes = [];
-  if (item.tag?.trim()) prefixes.push(`tag:${item.tag.trim()}`);
-  if (item.provider?.trim()) prefixes.push(`provider:${item.provider.trim()}`);
-  if (String(item.interval || '').trim()) prefixes.push(`interval:${String(item.interval).trim()}`);
-  if (item.proxyDirect) prefixes.push(`proxy_direct:${item.proxyDirect}`);
+  if (modifierAvailable('tag', target, item.url) && item.tag?.trim()) prefixes.push(`tag:${item.tag.trim()}`);
+  if (modifierAvailable('provider', target, item.url) && item.provider?.trim()) {
+    prefixes.push(`provider:${item.provider.trim()}`);
+  }
+  if (modifierAvailable('interval', target, item.url) && String(item.interval || '').trim()) {
+    prefixes.push(`interval:${String(item.interval).trim()}`);
+  }
+  if (modifierAvailable('proxyDirect', target, item.url) && item.proxyDirect) {
+    prefixes.push(`proxy_direct:${item.proxyDirect}`);
+  }
   return [...prefixes, item.url.trim()].join(',');
 }
 
 export function serializeSourceItems(items, target) {
   validateSourceItems(items, target);
-  return items.map(serializeSourceItem).join('\n');
+  return items.map((item) => serializeSourceItem(item, target)).join('\n');
+}
+
+export function serializePlainSourceItems(items) {
+  return (items || [])
+    .map((item) => String(item?.url || '').trim())
+    .filter(Boolean)
+    .join('\n');
 }
