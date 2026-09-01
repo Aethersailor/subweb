@@ -514,7 +514,7 @@ export default {
       }
       if (this.backendProbe.state === 'online') {
         if (this.backendProbe.type === BACKEND_TYPES.SUBCONVERTER_EXTENDED) {
-          return `在线 · SubConverter-Extended · ${this.backendProbe.version} · 已启用专用适配`;
+          return `在线 · ${this.backendProbe.version} · 已启用专用适配`;
         }
         if (this.backendProbe.type === BACKEND_TYPES.LEGACY) {
           return `在线 · 传统后端 · ${this.backendProbe.version}`;
