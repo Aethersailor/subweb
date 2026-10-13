@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run check
+RUN npm run build
 
 FROM nginx:1.31.6-alpine
 LABEL org.opencontainers.image.source="https://github.com/Aethersailor/subweb"
