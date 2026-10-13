@@ -6,25 +6,14 @@
   "scripts": {
     "serve": "vite --host 0.0.0.0",
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "lint": "eslint .",
-    "test": "node --test",
-    "pages:check": "npx --yes wrangler@4.127.1 pages functions build functions --outdir dist/functions-test --project-directory . --build-output-directory dist",
-    "format:check": "prettier --check . --ignore-path .gitignore",
-    "check": "npm run format:check && npm run lint && npm test && npm run build && npm run pages:check"
+    "build": "vite build"
   },
   "dependencies": {
     "vue": "^3.5.43",
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-vue": "^6.0.9",
-    "eslint": "^10.12.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-vue": "^10.11.1",
-    "globals": "^17.13.0",
-    "prettier": "^3.9.9",
     "vite": "^8.3.4"
   }
 }

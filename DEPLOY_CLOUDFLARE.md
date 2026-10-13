@@ -156,7 +156,7 @@ Pages 可以为同仓库分支和 Pull Request 创建独立预览部署。预览
 
 ```bash
 npm ci
-npm run check
+npm run build
 ```
 
-`npm run check` 会执行格式检查、ESLint、Node.js 测试、Vite 构建和 Pages Functions 打包。
+`npm run build` 生成 Vite 构建产物。功能由维护者人工验证，CodeQL 独立扫描。

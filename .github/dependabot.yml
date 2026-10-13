@@ -1,29 +1,41 @@
 version: 2
 updates:
-  - package-ecosystem: 'github-actions'
-    directory: '/'
-    schedule: { interval: 'daily', time: '04:00' }
-    open-pull-requests-limit: 1
-    rebase-strategy: 'auto'
-    labels: ['dependencies', 'github-actions']
-    groups:
-      all:
-        patterns: ['*']
-  - package-ecosystem: 'npm'
-    directory: '/'
-    schedule: { interval: 'daily', time: '04:05' }
-    open-pull-requests-limit: 1
-    rebase-strategy: 'auto'
-    labels: ['dependencies', 'npm']
-    groups:
-      all:
-        patterns: ['*']
-  - package-ecosystem: 'docker'
-    directory: '/'
-    schedule: { interval: 'daily', time: '04:15' }
-    open-pull-requests-limit: 1
-    rebase-strategy: 'auto'
-    labels: ['dependencies', 'docker']
-    groups:
-      all:
-        patterns: ['*']
+- package-ecosystem: docker
+  directory: /
+  schedule:
+    interval: daily
+    time: 08:00
+    timezone: Asia/Shanghai
+  open-pull-requests-limit: 20
+  groups:
+    dependencies:
+      patterns:
+      - '*'
+  commit-message:
+    prefix: chore(deps)
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: daily
+    time: 08:00
+    timezone: Asia/Shanghai
+  open-pull-requests-limit: 20
+  groups:
+    dependencies:
+      patterns:
+      - '*'
+  commit-message:
+    prefix: chore(deps)
+- package-ecosystem: npm
+  directory: /
+  schedule:
+    interval: daily
+    time: 08:00
+    timezone: Asia/Shanghai
+  open-pull-requests-limit: 20
+  groups:
+    dependencies:
+      patterns:
+      - '*'
+  commit-message:
+    prefix: chore(deps)
