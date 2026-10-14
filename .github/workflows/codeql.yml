@@ -33,16 +33,16 @@ jobs:
           build_mode: none
     steps:
     - name: Checkout source
-      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@f3c49fd1ef3281abc41069b3dd22807a60c963f6
+      uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build_mode }}
         queries: security-extended
     - name: Analyze source
-      uses: github/codeql-action/analyze@f3c49fd1ef3281abc41069b3dd22807a60c963f6
+      uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d
       with:
         category: /language:${{ matrix.language }}
