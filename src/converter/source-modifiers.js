@@ -7,7 +7,7 @@ const PREFIXES = Object.freeze([
   ['proxy_direct:', 'proxyDirect'],
 ]);
 
-export const SOURCE_MODIFIER_TARGETS = Object.freeze({
+const SOURCE_MODIFIER_TARGETS = Object.freeze({
   tag: ['clash', 'clashr', 'surge', 'quanx', 'loon', 'surfboard', 'stash'],
   provider: ['clash', 'clashr', 'surge', 'quanx', 'loon', 'surfboard', 'stash'],
   interval: ['clash', 'clashr', 'surge', 'quanx', 'stash'],
@@ -34,7 +34,7 @@ export function createSourceItem(value = {}) {
   };
 }
 
-export function splitSources(value) {
+function splitSources(value) {
   return String(value || '')
     .split(/\r?\n|\|/)
     .map((item) => item.trim())
@@ -69,7 +69,7 @@ export function parseSourceItems(value) {
   return splitSources(value).map(parseSourceItem);
 }
 
-export function isRemoteSubscriptionSource(value) {
+function isRemoteSubscriptionSource(value) {
   const source = String(value || '').trim();
   return !source || /^https?:\/\//i.test(source);
 }

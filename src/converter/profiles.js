@@ -39,7 +39,7 @@ export const DEFAULT_MORE_CONFIG = Object.freeze(
   Object.fromEntries([...TEXT_PARAMETERS, ...BASE64_PARAMETERS, ...BOOLEAN_PARAMETERS].map((name) => [name, ''])),
 );
 
-export const BOOLEAN_PARAMETER_OPTIONS = Object.freeze([
+const BOOLEAN_PARAMETER_OPTIONS = Object.freeze([
   { key: 'emoji', label: 'Emoji', hint: '同时控制添加 Emoji 和移除旧 Emoji' },
   { key: 'add_emoji', label: '添加 Emoji', hint: '单独控制添加 Emoji' },
   { key: 'remove_emoji', label: '移除旧 Emoji', hint: '单独控制移除已有 Emoji' },
@@ -71,7 +71,7 @@ export const BOOLEAN_PARAMETER_OPTIONS = Object.freeze([
   { key: 'strict', label: '严格更新', hint: '启用托管配置严格更新模式' },
 ]);
 
-export const LEGACY_TARGET_OPTIONS = Object.freeze([
+const LEGACY_TARGET_OPTIONS = Object.freeze([
   { value: 'clash', text: 'Clash' },
   { value: 'clashr', text: 'ClashR' },
   { value: 'v2ray', text: 'V2Ray' },
@@ -187,13 +187,13 @@ export function availableBooleanParameters(backendType, target) {
   return BOOLEAN_PARAMETER_OPTIONS.filter((item) => isParameterAvailable(item.key, backendType, target));
 }
 
-export function availableParameterNames(backendType, target) {
+function availableParameterNames(backendType, target) {
   return [...TEXT_PARAMETERS, ...BASE64_PARAMETERS, ...BOOLEAN_PARAMETERS].filter((name) =>
     isParameterAvailable(name, backendType, target),
   );
 }
 
-export function countActiveOptions(moreConfig, backendType, target) {
+export function countActiveOptions(moreConfig = {}, backendType = BACKEND_TYPES.LEGACY, target = 'clash') {
   return availableParameterNames(backendType, target).filter((name) => {
     const value = moreConfig?.[name];
     return typeof value === 'string' ? value.trim() !== '' : value !== undefined && value !== null;

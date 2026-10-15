@@ -8,11 +8,11 @@
       <span class="section-badge">{{ targetLabel }}</span>
     </div>
 
-    <div v-if="formMessage.text" class="form-message" :class="`is-${formMessage.type}`" role="alert">
+    <div v-if="formMessage.text" class="form-message" role="alert">
       {{ formMessage.text }}
     </div>
 
-    <div v-if="!isSubConverterExtended" class="field field-wide">
+    <div v-if="!isSubConverterExtended" class="field">
       <label for="subscription-urls">订阅链接或节点</label>
       <textarea
         id="subscription-urls"
@@ -22,7 +22,7 @@
         :placeholder="placeholder"
         rows="4"
         spellcheck="false"
-        @input="handleUrlsInput"
+        @input="clearGeneratedResults"
       ></textarea>
       <span class="field-hint">每行一条，也支持使用 | 分隔多个链接或节点。</span>
     </div>
@@ -42,7 +42,7 @@
       </div>
 
       <div v-if="isShowSourceImport" class="source-import reveal-block">
-        <div class="field field-wide">
+        <div class="field">
           <label for="source-import">批量粘贴订阅链接或节点</label>
           <textarea
             id="source-import"
@@ -69,7 +69,7 @@
               删除
             </button>
           </div>
-          <div class="field field-wide">
+          <div class="field">
             <label :for="`source-url-${index}`">订阅 URL 或节点</label>
             <input
               :id="`source-url-${index}`"
@@ -153,7 +153,7 @@
       {{ backendProbe.warning }}
     </div>
 
-    <div v-if="isShowManualApiUrl" class="field field-wide reveal-block">
+    <div v-if="isShowManualApiUrl" class="field reveal-block">
       <label for="manual-api">自定义后端 API</label>
       <input
         id="manual-api"
@@ -195,7 +195,7 @@
       </button>
     </div>
 
-    <div v-if="isShowRemoteConfig" class="field field-wide reveal-block">
+    <div v-if="isShowRemoteConfig" class="field reveal-block">
       <label for="manual-remote">自定义远程配置</label>
       <input
         id="manual-remote"
@@ -390,19 +390,14 @@
 </template>
 
 <script>
-import {
-  countActiveOptions,
-  getSubLink,
-  normalizeApiBaseUrl,
-  normalizeRemoteConfigUrl,
-  toStandardBase64,
-} from './index.js';
+import { getSubLink, normalizeApiBaseUrl, normalizeRemoteConfigUrl, toStandardBase64 } from './index.js';
 import showNotification from '@/components/notification';
 import { getRuntimeConfig } from '@/config/runtime.js';
 import { BACKEND_TYPES, normalizeBackendType, parseBackendIdentity, resolveBackendType } from '@/converter/backend.js';
 import {
   DEFAULT_MORE_CONFIG,
   availableBooleanParameters,
+  countActiveOptions,
   countSuppressedOptions,
   getTargetOptions,
   isParameterAvailable,
@@ -447,7 +442,6 @@ export default {
       remoteConfig: runtimeConfig.remoteConfigOptions[0]?.value || '',
       isShortUrlLoading: false,
       formMessage: {
-        type: 'error',
         text: '',
         field: '',
       },
@@ -455,7 +449,6 @@ export default {
         state: 'idle',
         version: '',
         type: BACKEND_TYPES.UNKNOWN,
-        configuredType: BACKEND_TYPES.AUTO,
         warning: '',
       },
       backendProbeController: null,
@@ -604,7 +597,6 @@ export default {
         state: 'idle',
         version: '',
         type: BACKEND_TYPES.UNKNOWN,
-        configuredType: BACKEND_TYPES.AUTO,
         warning: '',
       });
     },
@@ -617,7 +609,7 @@ export default {
       if (wasSubConverterExtended && !willUseSubConverterExtended) {
         this.urls = serializePlainSourceItems(this.sourceItems);
       } else if (!wasSubConverterExtended && willUseSubConverterExtended) {
-        this.syncSourceItemsFromUrls(true);
+        this.syncSourceItemsFromUrls();
       }
       this.lastTargetByBackend[this.backendType] = this.target;
       this.backendProbe = probe;
@@ -650,7 +642,6 @@ export default {
         ...this.backendProbe,
         state: 'checking',
         version: '',
-        configuredType,
         warning: '',
       };
       const timeoutId = window.setTimeout(() => controller.abort(), 7000);
@@ -678,24 +669,21 @@ export default {
             configuredType === BACKEND_TYPES.SUBCONVERTER_EXTENDED ? 'SubConverter-Extended' : '传统模式'
           }，但 /version 返回了不同类型；已暂停专用能力。`;
         }
-        if (requestId !== this.backendProbeRequestId) return;
         this.setBackendProbe({
           state: 'online',
           version: body,
           type: resolvedType,
-          configuredType,
           warning,
         });
       } catch {
         if (requestId !== this.backendProbeRequestId) {
           return;
         }
-        const fallbackType = configuredType === BACKEND_TYPES.AUTO ? BACKEND_TYPES.UNKNOWN : configuredType;
+        const fallbackType = resolveBackendType(configuredType, BACKEND_TYPES.UNKNOWN, false);
         this.setBackendProbe({
           state: 'unreachable',
           version: '',
           type: fallbackType,
-          configuredType,
           warning:
             fallbackType === BACKEND_TYPES.UNKNOWN
               ? ''
@@ -740,17 +728,9 @@ export default {
     sourceItemPreview(item) {
       return serializeSourceItem(item, this.target) || '填写来源后显示最终组合形式';
     },
-    handleUrlsInput() {
-      this.clearGeneratedResults();
-    },
-    syncSourceItemsFromUrls(force = false) {
+    syncSourceItemsFromUrls() {
       const imported = parseSourceItems(this.urls);
-      const onlyBlank =
-        this.sourceItems.length === 1 &&
-        !['url', 'tag', 'provider', 'interval', 'proxyDirect'].some((key) =>
-          String(this.sourceItems[0]?.[key] || '').trim(),
-        );
-      if (imported.length && (force || onlyBlank || this.sourceItems.length === 0)) {
+      if (imported.length) {
         this.sourceItems = imported;
       } else if (this.sourceItems.length === 0) {
         this.sourceItems = [createSourceItem()];
@@ -811,14 +791,14 @@ export default {
         this.setFormMessage('复制失败，请手动复制生成的链接');
       }
     },
-    setFormMessage(text, field = '', type = 'error') {
-      this.formMessage = { text, field, type };
+    setFormMessage(text, field = '') {
+      this.formMessage = { text, field };
       if (field) {
         this.$nextTick(() => this.$refs[`${field}Input`]?.focus());
       }
     },
     clearFormMessage() {
-      this.formMessage = { text: '', field: '', type: 'error' };
+      this.formMessage = { text: '', field: '' };
     },
     clearGeneratedResults() {
       this.result = { subUrl: '', shortUrl: '' };
@@ -1030,12 +1010,6 @@ export default {
   background: color-mix(in srgb, var(--danger) 10%, var(--surface-soft));
   border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
   border-radius: 14px;
-}
-
-.form-message.is-success {
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 10%, var(--surface-soft));
-  border-color: color-mix(in srgb, var(--success) 30%, transparent);
 }
 
 .backend-status {

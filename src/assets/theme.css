@@ -15,7 +15,6 @@
   --surface: rgba(255, 255, 255, 0.82);
   --surface-strong: rgba(255, 255, 255, 0.94);
   --surface-soft: rgba(255, 255, 255, 0.52);
-  --surface-hover: rgba(255, 255, 255, 0.74);
   --surface-border: rgba(255, 255, 255, 0.7);
   --inner-border: rgba(15, 23, 42, 0.09);
   --control-bg: rgba(255, 255, 255, 0.72);
@@ -24,11 +23,9 @@
   --text-primary: #1a202c;
   --text-secondary: #4a5568;
   --text-muted: #64748b;
-  --header-gradient: linear-gradient(135deg, #1a202c 0%, #4a5568 100%);
   --accent-gradient: linear-gradient(135deg, #0284c7 0%, #0891b2 45%, #65a30d 100%);
   --accent-soft: rgba(2, 132, 199, 0.1);
   --accent-blue: #0284c7;
-  --accent-green: #65a30d;
   --success: #059669;
   --warning: #d97706;
   --danger: #dc2626;
@@ -52,7 +49,6 @@
   --surface: rgba(15, 23, 42, 0.72);
   --surface-strong: rgba(19, 28, 45, 0.94);
   --surface-soft: rgba(255, 255, 255, 0.045);
-  --surface-hover: rgba(255, 255, 255, 0.07);
   --surface-border: rgba(148, 163, 184, 0.18);
   --inner-border: rgba(255, 255, 255, 0.085);
   --control-bg: rgba(20, 24, 33, 0.7);
@@ -61,11 +57,9 @@
   --text-primary: #f8fafc;
   --text-secondary: #a0aec0;
   --text-muted: #7f8ea3;
-  --header-gradient: linear-gradient(135deg, #ffffff 0%, #90cdf4 100%);
   --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #22d3ee 42%, #84cc16 100%);
   --accent-soft: rgba(56, 189, 248, 0.12);
   --accent-blue: #38bdf8;
-  --accent-green: #84cc16;
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #fb7185;
@@ -201,33 +195,6 @@ textarea:focus-visible {
 .glass-panel > * {
   position: relative;
   z-index: 1;
-}
-
-.pill-button {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  color: var(--text-primary);
-  font-weight: 700;
-  line-height: 1;
-  text-decoration: none;
-  cursor: pointer;
-  background: var(--control-bg);
-  border: 1px solid var(--control-border);
-  border-radius: 999px;
-  box-shadow: var(--control-shadow);
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.pill-button:hover {
-  background: var(--control-hover);
-  transform: translateY(-1px);
 }
 
 @media (max-width: 640px) {

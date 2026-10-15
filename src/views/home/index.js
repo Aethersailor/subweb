@@ -1,12 +1,4 @@
-import {
-  BASE64_PARAMETERS,
-  BOOLEAN_PARAMETERS,
-  TEXT_PARAMETERS,
-  countActiveOptions as countProfileOptions,
-  filterMoreConfig,
-} from '../../converter/profiles.js';
-
-export { BASE64_PARAMETERS, BOOLEAN_PARAMETERS, TEXT_PARAMETERS };
+import { BASE64_PARAMETERS, BOOLEAN_PARAMETERS, TEXT_PARAMETERS, filterMoreConfig } from '../../converter/profiles.js';
 
 function bytesToBase64(value) {
   const bytes = new TextEncoder().encode(value);
@@ -64,10 +56,6 @@ export function normalizeRemoteConfigUrl(value) {
   return url.href;
 }
 
-export function countActiveOptions(moreConfig = {}, backendType = 'legacy', target = 'clash') {
-  return countProfileOptions(moreConfig, backendType, target);
-}
-
 export function getSubLink({ urls, api, target, remoteConfig = '', moreConfig = {}, backendType = 'legacy' }) {
   const normalizedApi = normalizeApiBaseUrl(api);
   const normalizedSources = urls
@@ -123,13 +111,4 @@ export function getSubLink({ urls, api, target, remoteConfig = '', moreConfig = 
   }
 
   return `${normalizedApi}/sub?${params.toString()}`;
-}
-
-export function regexCheck(value) {
-  try {
-    normalizeApiBaseUrl(value);
-    return true;
-  } catch {
-    return false;
-  }
 }
