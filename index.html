@@ -5,6 +5,25 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <script>
+      (() => {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const colorScheme = document.querySelector('meta[name="color-scheme"]');
+        const updateTheme = ({ matches }) => {
+          document.documentElement.classList.toggle('dark-style', matches);
+          document.documentElement.classList.toggle('light-style', !matches);
+          colorScheme.content = matches ? 'dark' : 'light';
+        };
+
+        // Declare the active theme before modules and runtime configuration load.
+        updateTheme(mediaQuery);
+        if (mediaQuery.addEventListener) {
+          mediaQuery.addEventListener('change', updateTheme);
+        } else {
+          mediaQuery.addListener(updateTheme);
+        }
+      })();
+    </script>
     <meta
       name="description"
       content="Subconverter Web - 在线订阅转换工具，支持 Clash、Quantumult X、Surge、V2Ray 等主流客户端格式。"

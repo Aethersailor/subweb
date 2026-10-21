@@ -1,6 +1,7 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --content-width: 1040px;
+  --bg-base: #eef2f7;
   --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #eef2f7 48%, #e2e8f0 100%);
   --bg-grid: rgba(15, 23, 42, 0.055);
   --bg-sheen: linear-gradient(
@@ -35,6 +36,8 @@
 }
 
 .dark-style {
+  color-scheme: dark;
+  --bg-base: #0d111a;
   --bg-gradient: linear-gradient(135deg, #05070b 0%, #0d111a 46%, #111827 100%);
   --bg-grid: rgba(148, 163, 184, 0.075);
   --bg-sheen: linear-gradient(
@@ -75,7 +78,7 @@
 html {
   min-width: 320px;
   min-height: 100%;
-  background: #eef2f7;
+  background: var(--bg-base);
 }
 
 body {

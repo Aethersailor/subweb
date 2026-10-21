@@ -3,9 +3,6 @@ import App from './App.vue';
 import router from './router';
 import { setRuntimeConfig } from './config/runtime.js';
 
-const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-document.body.classList.add(prefersDarkScheme ? 'dark-style' : 'light-style');
-
 function runtimeConfigUrl(path) {
   return `${import.meta.env.BASE_URL}${path}`;
 }
