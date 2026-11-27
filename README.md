@@ -140,16 +140,6 @@ window.config = {
   // 首页菜单
   menuItem: [
     {
-      title: '通知频道',
-      link: 'https://t.me/custom_openclash_rules',
-      target: '_blank',
-    },
-    {
-      title: '聊天群组',
-      link: 'https://t.me/custom_openclash_rules_group',
-      target: '_blank',
-    },
-    {
       title: 'Custom_OpenClash_Rules',
       link: 'https://github.com/Aethersailor/Custom_OpenClash_Rules',
       target: '_blank',
